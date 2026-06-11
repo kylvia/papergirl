@@ -83,26 +83,29 @@ run_with_timeout "$TIMEOUT_SECS" "$CLAUDE_BIN" \
   >> "$LOG" 2>&1 < /dev/null
 rc=$?
 
+# 预初始化，避免 set -u 下 read 未填满某字段时变量未绑定
+STATUS=""; SESSION=""; TITLE=""; MEDIA=""
 IFS=$'\t' read -r STATUS SESSION TITLE MEDIA <<EOF
 $(python3 tools/claude_session.py record --log "$LOG" --out "$RECORD" --date "$DATE" --slot "$SLOT" --rc "$rc")
 EOF
+STATUS="${STATUS:-}"; SESSION="${SESSION:-}"; TITLE="${TITLE:-}"; MEDIA="${MEDIA:-}"
 
-echo "[episode] rc=$rc status=$STATUS title=$TITLE media_id=$MEDIA"
+echo "[episode] rc=$rc status=${STATUS} title=${TITLE} media_id=${MEDIA}"
 echo "[episode] record: $RECORD"
-if [ -n "$SESSION" ] && [ "$SESSION" != "-" ]; then
-  echo "[episode] 继续修改: claude --resume $SESSION"
+if [ -n "${SESSION}" ] && [ "${SESSION}" != "-" ]; then
+  echo "[episode] 继续修改: claude --resume ${SESSION}"
 fi
 
 # 推送给人——让无人值守跑完能喊到你。未配 NOTIFY_WEBHOOK 时自动降级为本地打印。
-case "$STATUS" in
-  pushed)  NOTE="📮 papergirl $DATE-$SLOT 草稿就绪：《$TITLE》。去公众号后台终审+群发。" ;;
-  dry-run) NOTE="🧪 papergirl $DATE-$SLOT dry-run 跑通：《$TITLE》（未真推）。" ;;
-  skipped) NOTE="🛑 papergirl $DATE-$SLOT 跳过：素材不足未出稿。" ;;
-  *)       NOTE="⚠️ papergirl $DATE-$SLOT 失败（status=$STATUS rc=$rc）。看日志 $LOG" ;;
+case "${STATUS}" in
+  pushed)  NOTE="📮 papergirl ${DATE}-${SLOT} 草稿就绪：《${TITLE}》。去公众号后台终审+群发。" ;;
+  dry-run) NOTE="🧪 papergirl ${DATE}-${SLOT} dry-run 跑通：《${TITLE}》（未真推）。" ;;
+  skipped) NOTE="🛑 papergirl ${DATE}-${SLOT} 跳过：素材不足未出稿。" ;;
+  *)       NOTE="⚠️ papergirl ${DATE}-${SLOT} 失败（status=${STATUS} rc=${rc}）。看日志 ${LOG}" ;;
 esac
-python3 "$REPO/tools/notify.py" "$NOTE" >/dev/null 2>&1 || true
+python3 "$REPO/tools/notify.py" "${NOTE}" >/dev/null 2>&1 || true
 
-case "$STATUS" in
+case "${STATUS}" in
   pushed|dry-run|skipped) exit 0 ;;
 esac
 [ "$rc" -ne 0 ] && exit "$rc"
