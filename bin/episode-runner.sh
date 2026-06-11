@@ -93,6 +93,15 @@ if [ -n "$SESSION" ] && [ "$SESSION" != "-" ]; then
   echo "[episode] 继续修改: claude --resume $SESSION"
 fi
 
+# 推送给人——让无人值守跑完能喊到你。未配 NOTIFY_WEBHOOK 时自动降级为本地打印。
+case "$STATUS" in
+  pushed)  NOTE="📮 papergirl $DATE-$SLOT 草稿就绪：《$TITLE》。去公众号后台终审+群发。" ;;
+  dry-run) NOTE="🧪 papergirl $DATE-$SLOT dry-run 跑通：《$TITLE》（未真推）。" ;;
+  skipped) NOTE="🛑 papergirl $DATE-$SLOT 跳过：素材不足未出稿。" ;;
+  *)       NOTE="⚠️ papergirl $DATE-$SLOT 失败（status=$STATUS rc=$rc）。看日志 $LOG" ;;
+esac
+python3 "$REPO/tools/notify.py" "$NOTE" >/dev/null 2>&1 || true
+
 case "$STATUS" in
   pushed|dry-run|skipped) exit 0 ;;
 esac
