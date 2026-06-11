@@ -41,7 +41,7 @@ def main() -> int:
     ap.add_argument('md')
     ap.add_argument('--title', default=None)
     ap.add_argument('--cover', default=None)
-    ap.add_argument('--theme', default='default')
+    ap.add_argument('--theme', default='grace')
     ap.add_argument('--summary', default=None)
     ap.add_argument('--author', default=None)
     ap.add_argument('--dry-run', action='store_true', help='只本地渲染，不调微信 API')
