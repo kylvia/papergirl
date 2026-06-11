@@ -32,3 +32,9 @@ state/metrics.json
 
 # 历史基线（真实账号数据）
 state/baseline.md
+
+# 喂数据 agent id
+state/.feed-agent-id
+
+# Claude Code 本地权限白名单（机器本地，不入库）
+.claude/settings.local.json
