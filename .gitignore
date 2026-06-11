@@ -26,3 +26,6 @@ __pycache__/
 # 但 .claude 下的运行缓存仍排除（上面的 !.claude/** 会把它们带回来）
 .claude/**/__pycache__/
 .claude/**/*.pyc
+
+# 账号效果数据（真实数字，不入库）
+state/metrics.json
