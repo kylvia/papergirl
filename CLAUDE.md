@@ -72,9 +72,12 @@ python3 tools/push.py drafts/<x>.md --dry-run --verbose
 ```bash
 paseo schedule create --cron "30 23 * * *" \
   --name "papergirl 日更 am" \
+  --provider claude \
   --mode full-access \
   --cwd /Users/zhuanzmima0000/PWorkspace/papergirl \
-  "cd /Users/zhuanzmima0000/PWorkspace/papergirl && bin/episode-runner.sh --slot am；结束后读 state/runs/ 当天的 .json，汇报 status/title/media_id/session_id；失败时附 log 尾部 30 行"
+  "bin/episode-runner.sh --slot am；结束后读 state/runs/ 下今天的 .json 运行记录，汇报 status/title/media_id/session_id；status 不是 pushed 时附上对应 .jsonl 日志尾部 30 行"
+
+# 已创建：schedule id 41ab8208（2026-06-11）。查看：paseo schedule ls --json
 ```
 
 加开下午档：再建一条 `--cron "30 6 * * *"`（北京 14:30），`--slot pm`。
