@@ -84,23 +84,22 @@ paseo schedule create --cron "30 23 * * *" \
 
 ## X 源（可选增强）
 
-last30days 的 X 源要 `auth_token`（httpOnly cookie），页面 JS / relay 的 eval 读不到。
-browser-relay 的扩展已持有 CDP（chrome.debugger）会话，能读 httpOnly，但默认没暴露路由。
+last30days 的 X 源要 `auth_token`（httpOnly cookie）。`tools/x_cookies.py` 走 last30days
+自带的原生提取（直接读浏览器 Cookies SQLite + macOS Keychain 解密，httpOnly 只挡页面 JS、
+不挡磁盘读取），无需 browser-relay、不改任何全局包。
 
 启用（人在场时跑一次，cookie 能撑数月）：
 
 ```bash
-node ops/patch-browser-relay.mjs   # 给本地 relay 加 /api/cookies 路由（幂等、可 --revert）
-browser-relay restart
-# Chrome 里登录并打开 x.com，然后：
+# 前置：macOS + 用 Chrome（或 Brave/Firefox/Safari）登录过 x.com
 python3 tools/x_cookies.py          # 提取 auth_token+ct0 → state/x-cookies.env(0600)
+python3 tools/x_cookies.py --check  # 只验证不写文件
 ```
 
-之后 episode-runner 自动 source，X 信号并入 last30days。失效了 episode 只是降级跳过 X，不卡死。
+之后 episode-runner 自动 source，X 信号并入 last30days。失效了重跑即可；episode 取不到也只是降级跳过 X，不卡死。
 
 约束与权衡：
-- 补丁改的是**全局 npm 包** `@linsoai/browser-relay`，`npm update` 后需重跑 `ops/patch-browser-relay.mjs`。开源用户不用 X 源就不必跑。
-- `/api/cookies` 强制按域名过滤，不开"导出全部 cookie"；但它确实让本机进程能经 relay 读取该域 cookie，单机开发可接受。
+- 仅 macOS。首次提取 Keychain 可能弹窗，点允许。`--browser` 可指定 chrome/brave/firefox/safari/auto。
 - 用登录态抓 X 违反其 ToS，有限流/封号风险，赌的是你自己的 X 账号。
 - `auth_token` 是密码级凭证：只落 `state/x-cookies.env`(gitignored, 0600)，`tools/x_cookies.py` 不打印其值。
 
