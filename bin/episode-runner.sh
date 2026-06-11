@@ -19,7 +19,9 @@ done
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
-export PATH="/usr/local/bin:/opt/homebrew/bin:$HOME/.bun/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# ~/.local/bin 优先于 homebrew：uv 管理的 python3.13/3.14 自带完好 expat，
+# 而 brew 的 python@3.14 bottle 在本机 pyexpat 符号缺失（last30days Reddit RSS 会降级）
+export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$HOME/.bun/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
 RUN_DIR="state/runs"; mkdir -p "$RUN_DIR" drafts

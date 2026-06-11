@@ -114,18 +114,26 @@ def _post_json(api_url: str, headers: dict, body: dict, timeout: int) -> dict:
         return json.loads(resp.read())
 
 
+_DL_HEADERS = {
+    # 网关图床 CDN 会 403 掉默认的 python-httpx/urllib UA
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+    'Accept': 'image/*,*/*;q=0.8',
+}
+
+
 def _download(url: str, timeout: int) -> bytes:
     last_exc = None
     for _ in range(3):
         try:
             if _httpx is not None:
-                with _httpx.Client(timeout=timeout) as c:
+                with _httpx.Client(timeout=timeout, follow_redirects=True, headers=_DL_HEADERS) as c:
                     r = c.get(url)
                     r.raise_for_status()
                     if r.content:
                         return r.content
             else:
-                with urllib.request.urlopen(url, timeout=timeout) as r:
+                req = urllib.request.Request(url, headers=_DL_HEADERS)
+                with urllib.request.urlopen(req, timeout=timeout) as r:
                     data = r.read()
                     if data:
                         return data
