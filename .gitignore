@@ -2,6 +2,7 @@
 .env
 *.env
 !.env.example
+state/x-cookies.env
 
 # 运行产物
 state/runs/*

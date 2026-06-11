@@ -82,6 +82,28 @@ paseo schedule create --cron "30 23 * * *" \
 
 加开下午档：再建一条 `--cron "30 6 * * *"`（北京 14:30），`--slot pm`。
 
+## X 源（可选增强）
+
+last30days 的 X 源要 `auth_token`（httpOnly cookie），页面 JS / relay 的 eval 读不到。
+browser-relay 的扩展已持有 CDP（chrome.debugger）会话，能读 httpOnly，但默认没暴露路由。
+
+启用（人在场时跑一次，cookie 能撑数月）：
+
+```bash
+node ops/patch-browser-relay.mjs   # 给本地 relay 加 /api/cookies 路由（幂等、可 --revert）
+browser-relay restart
+# Chrome 里登录并打开 x.com，然后：
+python3 tools/x_cookies.py          # 提取 auth_token+ct0 → state/x-cookies.env(0600)
+```
+
+之后 episode-runner 自动 source，X 信号并入 last30days。失效了 episode 只是降级跳过 X，不卡死。
+
+约束与权衡：
+- 补丁改的是**全局 npm 包** `@linsoai/browser-relay`，`npm update` 后需重跑 `ops/patch-browser-relay.mjs`。开源用户不用 X 源就不必跑。
+- `/api/cookies` 强制按域名过滤，不开"导出全部 cookie"；但它确实让本机进程能经 relay 读取该域 cookie，单机开发可接受。
+- 用登录态抓 X 违反其 ToS，有限流/封号风险，赌的是你自己的 X 账号。
+- `auth_token` 是密码级凭证：只落 `state/x-cookies.env`(gitignored, 0600)，`tools/x_cookies.py` 不打印其值。
+
 ## 环境依赖
 
 - `claude`（Claude Code CLI，episode 主体）

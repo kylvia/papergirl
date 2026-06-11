@@ -24,6 +24,9 @@ cd "$REPO"
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$HOME/.bun/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
+# X 源 cookie（可选）：tools/x_cookies.py 生成后在此 source，喂给 last30days
+[ -f state/x-cookies.env ] && { set -a; . state/x-cookies.env; set +a; }
+
 RUN_DIR="state/runs"; mkdir -p "$RUN_DIR" drafts
 LOG="$RUN_DIR/$DATE-$SLOT.jsonl"
 RECORD="$RUN_DIR/$DATE-$SLOT.json"
