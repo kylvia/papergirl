@@ -23,3 +23,6 @@ __pycache__/
 # 全局 gitignore 忽略了 .claude/，本仓 vendored skill 必须入库，反向豁免
 !.claude/
 !.claude/**
+# 但 .claude 下的运行缓存仍排除（上面的 !.claude/** 会把它们带回来）
+.claude/**/__pycache__/
+.claude/**/*.pyc
