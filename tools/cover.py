@@ -7,7 +7,8 @@
   IMAGE_MODEL     模型名（默认 gpt-image-2）
 
 用法：
-  python3 tools/cover.py --title "标题" [--subtitle "副标题"] [--style minimal-tech|editorial] --out drafts/x.png
+  python3 tools/cover.py --title "标题" [--subtitle "副标题"] [--summary "文章核心论点"] \
+      [--style minimal-tech|editorial] --out drafts/x.png
   python3 tools/cover.py --prompt "完整生图 prompt" --out drafts/x.png
   加 --dry-run 只渲染 prompt 不调 API。
 
@@ -75,7 +76,7 @@ def save_image_with_detected_ext(img: bytes, out_path: Path, declared_ext: str =
     return {'path': str(final_path), 'ext': ext}
 
 
-def build_prompt(title: str, subtitle: str, bullets: list, style: str) -> str:
+def build_prompt(title: str, subtitle: str, summary: str, bullets: list, style: str) -> str:
     path = PRESETS_DIR / f'{style}.txt'
     if not path.exists():
         available = sorted(p.stem for p in PRESETS_DIR.glob('*.txt'))
@@ -86,6 +87,7 @@ def build_prompt(title: str, subtitle: str, bullets: list, style: str) -> str:
     for key, value in (
         ('title', title),
         ('subtitle', subtitle),
+        ('summary', summary or subtitle or title),
         ('bullets_str', bullets_str),
         ('style', style),
         ('aspect_ratio', os.environ.get('COVER_ASPECT_RATIO', DEFAULT_ASPECT)),
@@ -189,6 +191,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(prog='cover.py', description='papergirl image generation')
     ap.add_argument('--title', default='')
     ap.add_argument('--subtitle', default='')
+    ap.add_argument('--summary', default='', help='文章核心论点，驱动封面视觉构思（不渲染到图上）')
     ap.add_argument('--bullets', action='append', default=[], help='可重复；底部数据条文字')
     ap.add_argument('--style', default='minimal-tech')
     ap.add_argument('--prompt', default='', help='完整 prompt，给了就忽略 title/style 模板')
@@ -199,7 +202,7 @@ def main() -> int:
 
     if not args.prompt and not args.title:
         ap.error('need --title or --prompt')
-    prompt = args.prompt or build_prompt(args.title, args.subtitle, args.bullets, args.style)
+    prompt = args.prompt or build_prompt(args.title, args.subtitle, args.summary, args.bullets, args.style)
 
     if args.dry_run:
         print(json.dumps({'action': 'dry-run', 'prompt_length': len(prompt), 'out': args.out}, ensure_ascii=False))

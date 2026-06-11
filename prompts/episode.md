@@ -45,7 +45,7 @@
 
 ## 5. 配图
 
-- 封面：`python3 tools/cover.py --title "<短标题≤12字>" --subtitle "<一句话>" --style minimal-tech --out drafts/{DATE}-<slug>-cover.png`（严肃/数据向改 `--style editorial`）
+- 封面：`python3 tools/cover.py --title "<短标题≤12字>" --subtitle "<一句话>" --summary "<2-3 句文章核心论点，驱动画面构思不上图>" --style minimal-tech --out drafts/{DATE}-<slug>-cover.png`（严肃/数据向改 `--style editorial`）
 - **必须用工具输出 JSON 里的 `path` 作为封面路径**（扩展名可能被修正为 jpg）
 - 失败重试 1 次；仍失败 → 从简报来源页下载主图到 drafts/ 兜底；再不行就无封面推送并在最终 JSON 的 reason 注明
 - 正文视觉断点（**强制：正文 ≥1400 字至少 2 个，更短至少 1 个，上限 3 个**）。
