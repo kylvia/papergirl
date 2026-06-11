@@ -64,15 +64,25 @@ def main() -> int:
         print("还没数据。发布后用 tools/metrics.py add 录入。")
         return 0
 
-    # 总览：质量信号排行（始终可看）
-    overall_look = [look_rate(m) for m in rows if look_rate(m) is not None]
-    if overall_look:
-        print(f"全局在看率：均值 {statistics.mean(overall_look)*100:.1f}% | "
-              f"区间 {min(overall_look)*100:.1f}%–{max(overall_look)*100:.1f}%")
-    ranked = sorted([m for m in rows if look_rate(m) is not None], key=look_rate, reverse=True)
-    print("\n按在看率（看了不白看的代理）：")
-    for m in ranked[:10]:
-        print(f"  {look_rate(m)*100:5.1f}%  涨粉 {str(m.get('follow') or '-'):>4}  {m.get('title','')[:34]}")
+    # 低量级（<100 阅读/篇）在看率恒 0、无意义 → 早期按阅读+转发+涨粉排，攒量后才看率
+    reads = [m.get("read") for m in rows if m.get("read")]
+    low_volume = (not reads) or (statistics.median(reads) < 100)
+    if low_volume:
+        ranked = sorted(rows, key=lambda m: (m.get("read") or 0), reverse=True)
+        print("低量级阶段（中位阅读 <100）：按 阅读/转发/涨粉 看，在看率此时恒 0 无意义。\n")
+        print(f"{'阅读':>6} {'转发':>5} {'涨粉':>5}  标题")
+        for m in ranked[:12]:
+            print(f"{str(m.get('read') or '-'):>6} {str(m.get('share') or '-'):>5} "
+                  f"{str(m.get('follow') or '-'):>5}  {m.get('title','')[:34]}")
+    else:
+        overall_look = [look_rate(m) for m in rows if look_rate(m) is not None]
+        if overall_look:
+            print(f"全局在看率：均值 {statistics.mean(overall_look)*100:.1f}% | "
+                  f"区间 {min(overall_look)*100:.1f}%–{max(overall_look)*100:.1f}%")
+        ranked = sorted([m for m in rows if look_rate(m) is not None], key=look_rate, reverse=True)
+        print("\n按在看率（看了不白看的代理）：")
+        for m in ranked[:10]:
+            print(f"  {look_rate(m)*100:5.1f}%  涨粉 {str(m.get('follow') or '-'):>4}  {m.get('title','')[:34]}")
 
     if n < args.min:
         print(f"\n样本 {n} < {args.min}，还不够做赛道/原型归因——继续攒。"

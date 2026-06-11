@@ -29,3 +29,6 @@ __pycache__/
 
 # 账号效果数据（真实数字，不入库）
 state/metrics.json
+
+# 历史基线（真实账号数据）
+state/baseline.md
