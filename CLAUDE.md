@@ -82,6 +82,20 @@ paseo schedule create --cron "30 23 * * *" \
 
 加开下午档：再建一条 `--cron "30 6 * * *"`（北京 14:30），`--slot pm`。
 
+## 跨期趋势记忆（last30days store）
+
+扫描时带 `--store`，证据沉淀进 `~/.local/share/last30days/research.db`（last30days 默认库）。
+PICK 步骤用 `store.py trending --days 7` 拿跨天升温信号，把"上升期"判断从单次猜测变成累积数据。
+
+```bash
+python3 .claude/skills/last30days/scripts/store.py trending --days 7   # 升温主题
+python3 .claude/skills/last30days/scripts/store.py stats               # 库概况
+python3 .claude/skills/last30days/scripts/store.py query "<topic>" --since 7d
+```
+
+库随每期累积，越跑趋势判断越准。engine 与 store.py 共用同一默认库，无需配路径。
+（未来可选：`watchlist.py` 追连续剧式选题、`briefing.py --weekly` 出周报——想要某种文章形态时再加。）
+
 ## X 源（可选增强）
 
 last30days 的 X 源要 `auth_token`（httpOnly cookie）。`tools/x_cookies.py` 走 last30days
