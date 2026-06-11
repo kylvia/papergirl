@@ -5,8 +5,13 @@ episode 在无人值守时跑完，结论默认只进日志没人看。本工具
 这样"草稿就绪去发布""今天失败了"能真的到你手机/眼前。
 
 配置（.env，留空则只本地打印、不推送，安全降级）：
-  NOTIFY_KIND      feishu | serverchan | bark | slack | generic（默认 generic）
+  NOTIFY_KIND      wecom | feishu | bark | slack | generic（默认 generic）
   NOTIFY_WEBHOOK   对应渠道的 webhook URL / key
+
+推荐 wecom（企业微信群机器人，腾讯官方，零封号风险、免第三方中继）：
+  企业微信建群（自己一人也行）→ 群设置 → 群机器人 → 添加 → 复制 Webhook 地址，
+  填进 NOTIFY_WEBHOOK，NOTIFY_KIND=wecom。消息在微信生态里直接收。
+  官方文档：https://developer.work.weixin.qq.com/document/path/91770
 
 用法：
   python3 tools/notify.py "📮 papergirl 草稿就绪，去发布"
@@ -47,7 +52,11 @@ def send(msg: str) -> int:
         print(f"[notify:off] {msg}", file=sys.stderr)
         return 0
     try:
-        if kind == "feishu":
+        if kind == "wecom":
+            # 企业微信群机器人（官方）：hook 是完整 webhook/send?key=.. 地址
+            body = json.dumps({"msgtype": "text", "text": {"content": msg}}).encode()
+            _post(hook, body, {"Content-Type": "application/json"})
+        elif kind == "feishu":
             body = json.dumps({"msg_type": "text", "content": {"text": msg}}).encode()
             _post(hook, body, {"Content-Type": "application/json"})
         elif kind == "serverchan":
