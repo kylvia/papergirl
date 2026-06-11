@@ -32,6 +32,8 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
 | `tools/metrics.py` | 效果数据回流（人工喂，个人订阅号无 API） | 自有代码 |
 | `tools/review.py` | 每周复盘：质量信号归因到赛道/原型 | 自有代码 |
+| `tools/notify.py` | 推送通知（lark/wecom/feishu…），无人值守喊到人 | 自有代码 |
+| `tools/metrics_nudge.py` | 催数据：发布满 N 天没喂 metrics 就提醒 | 自有代码 |
 | `vendor/wechat-api/` | 微信草稿 SDK（vendored，origin baoyu-skills） | 不改；见 UPSTREAM.md |
 | `.claude/skills/last30days/` | 全网研究 skill（vendored，MIT） | 不改；见 UPSTREAM.md |
 | `state/published.json` | 发文史，选题查重的事实源 | episode 自动追加 |
