@@ -62,7 +62,8 @@
 
 - `python3 tools/push.py drafts/{DATE}-<slug>.md --title "<标题>" --summary "<摘要>" --cover <封面path> --verbose`
 - 成功标准：拿到 media_id 且输出无占位图（WECHATIMGPH_）告警；有告警就修复后重推
-- 成功后更新 `state/published.json`：往数组追加 `{"date":"{DATE}","slot":"{SLOT}","title":...,"topic":...,"primary_url":...,"media_id":...}`
+- 成功后更新 `state/published.json`：往数组追加一条，**含归因特征**（供效果复盘把数据归因到具体选题/文风）：
+  `{"date":"{DATE}","slot":"{SLOT}","title":..,"topic":..,"primary_url":..,"media_id":..,"beat":"<beats.yaml 里的赛道 id>","archetype":"<voice.md 五原型之一>","char_count":<正文字数>,"figure_count":<正文配图数>,"pick_trend":"<选题时该主题在 store trending 里的位置/热度，没有就 'cold'>"}`
 
 ## 7. 收尾
 

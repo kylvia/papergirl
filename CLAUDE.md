@@ -30,6 +30,8 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
 | `tools/push.py` | 推草稿（注入 per-process 微信代理） | 自有代码 |
 | `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
+| `tools/metrics.py` | 效果数据回流（人工喂，个人订阅号无 API） | 自有代码 |
+| `tools/review.py` | 每周复盘：质量信号归因到赛道/原型 | 自有代码 |
 | `vendor/wechat-api/` | 微信草稿 SDK（vendored，origin baoyu-skills） | 不改；见 UPSTREAM.md |
 | `.claude/skills/last30days/` | 全网研究 skill（vendored，MIT） | 不改；见 UPSTREAM.md |
 | `state/published.json` | 发文史，选题查重的事实源 | episode 自动追加 |
@@ -66,22 +68,32 @@ python3 tools/cover.py --title "测试" --out /tmp/c.png --dry-run
 python3 tools/push.py drafts/<x>.md --dry-run --verbose
 ```
 
-## Paseo 日更接入
+## Paseo 双更接入（已挂）
 
-北京 07:30 起跑（= UTC 前一日 23:30），paseo 里的任务只负责执行 runner 并汇报：
+| 档 | schedule id | cron(UTC) | 北京 | 草稿就绪 | 建议群发窗口 |
+|---|---|---|---|---|---|
+| am | 41ab8208 | `30 23 * * *` | 07:30 | ~08:15 | 午间 12:00–13:00 |
+| pm | 7b74d653 | `30 8 * * *` | 16:30 | ~17:15 | 晚间 20:00–21:30（最强开篇时段） |
+
+paseo 任务只跑 runner 并汇报。pm 档晚跑，蹭当天最新 AI 新闻。两档靠 published.json 7 天去重，pm 自动避开 am 已发主题。查看：`paseo schedule ls --json`。
+
+## 增长闭环（北极星=质量加权）
+
+个人订阅号无微信数据 API（datacube/getarticletotal/freepublish 全 48001），所以数据靠人工喂。
+北极星指标是**质量加权**：在看率 / 分享率 / 涨粉每篇，不看裸阅读数（防标题党腐蚀"事实严谨"定位）。
 
 ```bash
-paseo schedule create --cron "30 23 * * *" \
-  --name "papergirl 日更 am" \
-  --provider claude \
-  --mode full-access \
-  --cwd /Users/zhuanzmima0000/PWorkspace/papergirl \
-  "bin/episode-runner.sh --slot am；结束后读 state/runs/ 下今天的 .json 运行记录，汇报 status/title/media_id/session_id；status 不是 pushed 时附上对应 .jsonl 日志尾部 30 行"
-
-# 已创建：schedule id 41ab8208（2026-06-11）。查看：paseo schedule ls --json
+# 发布 1-3 天后，从后台读 4 个数贴回来（每篇 ~30 秒）
+python3 tools/metrics.py add --date 2026-06-12 --slot am --read 1234 --look 56 --share 23 --follow 9
+# 每周复盘：谁的在看率系统性偏高偏低 → 调整建议（不自动改，样本小先看）
+python3 tools/review.py
 ```
 
-加开下午档：再建一条 `--cron "30 6 * * *"`（北京 14:30），`--slot pm`。
+闭环：episode 出稿（published.json 记 beat/archetype/字数/配图数/选题热度）→ 人群发 →
+人喂 metrics → review.py 归因到赛道/原型 → 调 beats.yaml 权重 + voice.md 标题范式。
+
+**冷启动告诫**：日更样本小，早期（<8 篇）只看单篇排行 + 人的口味判断，别自动调权重——会学到噪声。
+real signal 要攒几周。review.py 刻意只报告+建议，不自动 mutate。
 
 ## 跨期趋势记忆（last30days store）
 
