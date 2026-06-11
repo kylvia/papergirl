@@ -14,12 +14,52 @@
 """
 import argparse
 import os
+import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SDK = ROOT / 'vendor' / 'wechat-api' / 'wechat-api.ts'
+
+# 微信代理偶发瞬时抖动（CONNECT 隧道中止）。只对这类网络层错误重试；
+# 撞到 40164 白名单 / 占位图 / token 这类逻辑错误立即失败，重试无意义。
+_TRANSIENT_RE = re.compile(
+    r'connect|tunnel|econnreset|econnrefused|etimedout|socket|fetch failed'
+    r'|network|timed out|proxy|enotfound|eai_again|hang ?up',
+    re.IGNORECASE,
+)
+_PERSISTENT_RE = re.compile(r'40164|errcode', re.IGNORECASE)
+
+
+def is_transient_failure(output: str) -> bool:
+    """非零退出时判断是否值得重试：命中网络签名且未命中明确的微信逻辑错误。"""
+    if _PERSISTENT_RE.search(output):
+        return False
+    return bool(_TRANSIENT_RE.search(output))
+
+
+def _run_with_retry(cmd: list, env: dict, retries: int, delay: int, verbose: bool) -> int:
+    """跑推送子进程；网络瞬时失败时重试。捕获输出后回显，保留可见性。"""
+    attempts = retries + 1
+    for attempt in range(1, attempts + 1):
+        proc = subprocess.run(cmd, env=env, cwd=str(ROOT), capture_output=True, text=True)
+        sys.stdout.write(proc.stdout)
+        sys.stderr.write(proc.stderr)
+        if proc.returncode == 0:
+            return 0
+        combined = (proc.stdout or '') + (proc.stderr or '')
+        if attempt < attempts and is_transient_failure(combined):
+            print(
+                f'[push] 推送失败（疑似代理瞬时抖动），{delay}s 后重试 '
+                f'{attempt}/{retries} ...',
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+            continue
+        return proc.returncode
+    return 1
 
 
 def load_dotenv(path: Path) -> None:
@@ -93,7 +133,12 @@ def main() -> int:
         proxied = 'proxy=on' if (proxy and not args.dry_run) else 'proxy=off'
         print(f'$ {shown}  [{proxied}]', file=sys.stderr)
 
-    return subprocess.call(cmd, env=env, cwd=str(ROOT))
+    # dry-run 是本地渲染，失败不该重试；真推时对代理瞬时抖动重试。
+    if args.dry_run:
+        return subprocess.call(cmd, env=env, cwd=str(ROOT))
+    retries = int(os.environ.get('PUSH_RETRIES', '3'))
+    delay = int(os.environ.get('PUSH_RETRY_DELAY', '60'))
+    return _run_with_retry(cmd, env, retries, delay, args.verbose)
 
 
 if __name__ == '__main__':
