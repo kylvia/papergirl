@@ -1,0 +1,24 @@
+# 凭证
+.env
+*.env
+!.env.example
+
+# 运行产物
+state/runs/*
+!state/runs/.gitkeep
+drafts/*
+!drafts/.gitkeep
+*.log
+
+# 依赖与缓存
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# 系统
+.DS_Store
+
+# 全局 gitignore 忽略了 .claude/，本仓 vendored skill 必须入库，反向豁免
+!.claude/
+!.claude/**

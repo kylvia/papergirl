@@ -1,0 +1,32 @@
+# papergirl 赛道清单 —— 人维护的目标函数，episode agent 每期读取。
+# 改这个文件 = 调整账号方向；不需要改代码。
+
+positioning: >
+  写给对 AI 感兴趣的小白和初级技术人。事实严谨打底，有趣味性，
+  读者看完要有获得感：至少带走一个「原来如此」和一个「我也能用上」。
+
+beats:
+  - id: model-releases
+    name: 前沿模型与产品发布
+    desc: OpenAI / Anthropic / Google / xAI / 国产大模型的新模型、新产品、重大更新与翻车
+    weight: high
+
+  - id: ai-tools
+    name: 普通人用得上的 AI 工具
+    desc: 新工具、新玩法、效率场景；重点回答「怎么用、值不值、坑在哪」
+    weight: high
+
+  - id: agents-coding
+    name: AI agent 与 vibe coding
+    desc: Claude Code / Codex / Cursor 等 agent 工具链，入门视角讲清楚能干什么
+    weight: medium
+
+  - id: open-source
+    name: 开源模型与本地部署
+    desc: 开源权重、本地跑模型、性价比之争
+    weight: medium
+
+  - id: industry
+    name: AI 行业事件与争议
+    desc: 公司动态、融资、监管、安全事件——只挑小白也会关心的，拒绝纯财经视角
+    weight: low

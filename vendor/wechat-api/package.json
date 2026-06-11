@@ -1,0 +1,10 @@
+{
+  "name": "papergirl-wechat-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@jsquash/webp": "^1.5.0",
+    "baoyu-md": "^0.1.0",
+    "jimp": "^1.6.0"
+  }
+}

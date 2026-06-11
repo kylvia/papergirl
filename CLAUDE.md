@@ -1,0 +1,94 @@
+# papergirl —— 项目宪法
+
+> 单人 AI 内容公众号的全自动日更引擎：last30days 全网扫描 → agent 自主选题 →
+> 写稿配图 → 推公众号草稿箱。人只做两件事：维护 `beats.yaml`、在草稿箱终审群发。
+> Agent-first：流程主体是 prompt（`prompts/episode.md`），代码只是工具。
+
+## 一次 episode 的真相
+
+```
+paseo（或手动）→ bin/episode-runner.sh --slot am
+  └─ spawn 一个 claude 会话执行 prompts/episode.md：
+     扫描(last30days) → 定题(写决策记录) → 深研(带引用简报)
+     → 写稿(去AI味+标题自评) → 配图(tools/cover.py)
+     → 推草稿箱(tools/push.py) → 更新 state/published.json → 末行 JSON
+  └─ runner 落 state/runs/<date>-<slot>.json（含 session_id）
+人工追加轮（可选）：claude --resume <session_id> "标题太平了，换个钩子重推"
+```
+
+- runner 结束会打印 resume 命令；session 里有完整选题理由和简报上下文
+- 质量门 = 你本人：草稿箱终审 + resume 改稿，没有自动群发
+
+## 目录职责
+
+| 路径 | 职责 | 改动方式 |
+|---|---|---|
+| `beats.yaml` | 赛道与账号定位（目标函数） | 人直接改，零代码 |
+| `prompts/episode.md` | episode 任务书（流程本体） | 调流程改这里，不是改代码 |
+| `bin/episode-runner.sh` | spawn claude + 抓 session_id + 落运行记录 | 唯一 runner |
+| `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
+| `tools/push.py` | 推草稿（注入 per-process 微信代理） | 自有代码 |
+| `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
+| `vendor/wechat-api/` | 微信草稿 SDK（vendored，origin baoyu-skills） | 不改；见 UPSTREAM.md |
+| `.claude/skills/last30days/` | 全网研究 skill（vendored，MIT） | 不改；见 UPSTREAM.md |
+| `state/published.json` | 发文史，选题查重的事实源 | episode 自动追加 |
+| `state/runs/` | 每期决策记录/简报/日志/session_id | episode 自动写，gitignored |
+| `drafts/` | 文章与图片产物 | episode 自动写，gitignored |
+
+## 硬规则（episode agent 与维护者都必须遵守）
+
+1. **凭证只住 `.env`**（gitignored，0600）。任何凭证不进 git、不打印到日志。仓库开源前跑一遍泄漏扫描。
+2. **微信代理是 per-process 的**：只由 `tools/push.py` 注入给推送子进程。绝不全局 export HTTPS_PROXY——生图和抓取走代理会被 filter 403。
+3. **正文图片必须先落地本地**再引用：代理 filter 只放行微信域，外域图片 URL 推送时会 403。
+4. **事实必须有出处**：论断锚到深研简报或核实过的来源，查不到就删，禁止编造数字/引语。
+5. **只进草稿箱，不群发**。群发永远是人工在公众号后台完成。
+6. 推送成功必须更新 `state/published.json`——这是防止重复选题的唯一事实源。
+7. 推送必须走 `python3 tools/push.py`，不要裸跑 `bun vendor/wechat-api/wechat-api.ts`。
+
+## 常用命令
+
+```bash
+# 手动跑一期（全流程但不真推）
+bin/episode-runner.sh --slot am --dry-run
+
+# 手动跑一期（真推草稿箱）
+bin/episode-runner.sh --slot am
+
+# 只看渲染后的任务书
+bin/episode-runner.sh --slot am --print-prompt
+
+# 对某期结果继续修改（session_id 在 state/runs/<date>-<slot>.json）
+claude --resume <session_id>
+
+# 单测两条腿
+python3 tools/cover.py --title "测试" --out /tmp/c.png --dry-run
+python3 tools/push.py drafts/<x>.md --dry-run --verbose
+```
+
+## Paseo 日更接入
+
+北京 07:30 起跑（= UTC 前一日 23:30），paseo 里的任务只负责执行 runner 并汇报：
+
+```bash
+paseo schedule create --cron "30 23 * * *" \
+  --name "papergirl 日更 am" \
+  --mode full-access \
+  --cwd /Users/zhuanzmima0000/PWorkspace/papergirl \
+  "cd /Users/zhuanzmima0000/PWorkspace/papergirl && bin/episode-runner.sh --slot am；结束后读 state/runs/ 当天的 .json，汇报 status/title/media_id/session_id；失败时附 log 尾部 30 行"
+```
+
+加开下午档：再建一条 `--cron "30 6 * * *"`（北京 14:30），`--slot pm`。
+
+## 环境依赖
+
+- `claude`（Claude Code CLI，episode 主体）
+- `bun`（微信 SDK）、`python3`（工具脚本；last30days 标称 3.12+，3.11 大部分可用，异常优先怀疑版本）
+- 生图走 `.env` 的 IMAGE_API_*（OpenAI-compatible chat/completions，返回 base64 或图链）
+- last30days 免费源（Reddit/HN/GitHub）零配置；X/TikTok 等增强源见其 SKILL.md，可选
+
+## 开源前检查单
+
+- [ ] `.env` 从未入库（`git log --all -- .env` 为空），`gitleaks` 过一遍
+- [ ] `state/published.json` 与 `drafts/` 是否清空看个人意愿
+- [ ] vendored 两处 LICENSE / UPSTREAM.md 完整
+- [ ] README 的 quickstart 在干净机器可复现
