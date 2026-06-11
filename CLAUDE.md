@@ -24,6 +24,7 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | 路径 | 职责 | 改动方式 |
 |---|---|---|
 | `beats.yaml` | 赛道与账号定位（目标函数） | 人直接改，零代码 |
+| `voice.md` | 声音档（人设/视角/文章原型/范文库/四层闸门） | 调文风改这里，写稿阶段硬约束 |
 | `prompts/episode.md` | episode 任务书（流程本体） | 调流程改这里，不是改代码 |
 | `bin/episode-runner.sh` | spawn claude + 抓 session_id + 落运行记录 | 唯一 runner |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
