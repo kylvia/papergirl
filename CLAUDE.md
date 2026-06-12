@@ -77,7 +77,9 @@ python3 tools/push.py drafts/<x>.md --dry-run --verbose
 | am | 41ab8208 | `30 23 * * *` | 07:30 | ~08:15 | 午间 12:00–13:00 |
 | pm | 7b74d653 | `30 8 * * *` | 16:30 | ~17:15 | 晚间 20:00–21:30（最强开篇时段） |
 
-paseo 任务只跑 runner 并汇报。pm 档晚跑，蹭当天最新 AI 新闻。两档靠 published.json 7 天去重，pm 自动避开 am 已发主题。查看：`paseo schedule ls --json`。
+外加催数据档 d14ba169（北京 11:00）。paseo 任务只跑 runner 并汇报。pm 档晚跑，蹭当天最新 AI 新闻。两档靠 published.json 7 天去重，pm 自动避开 am 已发主题。查看：`paseo schedule ls --json`。
+
+**坑（2026-06-12 踩过）**：建 claude provider 的 schedule 必须 `--mode bypassPermissions`，**不是** `full-access`（那是 codex 的模式）。paseo 创建时不校验、到运行才报 `Invalid mode`，会让任务建好却从不真跑。排查：`paseo schedule logs <id>` 看 ERROR；修：`paseo schedule update <id> --mode bypassPermissions`。Mac 睡眠会错过定时点，paseo 在唤醒后补跑（时间不精确但不丢）。
 
 ## 增长闭环（北极星=质量加权）
 
