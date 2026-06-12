@@ -34,6 +34,7 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `tools/review.py` | 每周复盘：质量信号归因到赛道/原型 | 自有代码 |
 | `tools/notify.py` | 推送通知（lark/wecom/feishu…），无人值守喊到人 | 自有代码 |
 | `tools/metrics_nudge.py` | 催数据：发布满 N 天没喂 metrics 就提醒 | 自有代码 |
+| `bin/console.sh` | 远程控制台：常驻 paseo agent，手机/终端运营（喂数据/查状态/复盘/补跑） | 自有代码 |
 | `vendor/wechat-api/` | 微信草稿 SDK（vendored，origin baoyu-skills） | 不改；见 UPSTREAM.md |
 | `.claude/skills/last30days/` | 全网研究 skill（vendored，MIT） | 不改；见 UPSTREAM.md |
 | `state/published.json` | 发文史，选题查重的事实源 | episode 自动追加 |
@@ -133,6 +134,24 @@ python3 tools/x_cookies.py --check  # 只验证不写文件
 - 仅 macOS。首次提取 Keychain 可能弹窗，点允许。`--browser` 可指定 chrome/brave/firefox/safari/auto。
 - 用登录态抓 X 违反其 ToS，有限流/封号风险，赌的是你自己的 X 账号。
 - `auth_token` 是密码级凭证：只落 `state/x-cookies.env`(gitignored, 0600)，`tools/x_cookies.py` 不打印其值。
+
+## 远程控制台（手机运营）
+
+`bin/console.sh` 背后是一个常驻 paseo agent「papergirl 控制台」（id 存 state/.console-agent-id），
+锁定本项目，懂四类操作：喂数据 / 查状态 / 看复盘 / 触发补跑。一句话自然语言驱动。
+
+```bash
+bin/console.sh "讲 prompt injection 那篇 阅读35 在看2 转发3 涨粉1"   # 喂数据
+bin/console.sh "今天跑了吗？草稿箱有啥"                              # 查状态
+bin/console.sh "这周哪篇在看率最高"                                  # 看复盘
+bin/console.sh "补跑 am"                                            # 后台补跑（飞书通知完成）
+bin/console.sh --image ~/Desktop/wx.png "喂这个"                    # 截图喂数据
+```
+
+**手机端**：装 Paseo App（或 app.paseo.sh），Mac 上 `paseo onboard` 出二维码扫码配对，
+之后在 App 里直接和「papergirl 控制台」对话——和上面终端用法一样，只是从手机。
+daemon 已挂中继 `wss://relay.paseo.sh`。**前提：Mac 醒着 + paseo daemon 在跑**（agent 在 Mac 上执行命令）；
+要随时可用就别让 Mac 休眠。
 
 ## 环境依赖
 
