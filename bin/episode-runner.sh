@@ -53,25 +53,25 @@ if [ "$PRINT_PROMPT" = "1" ]; then
 fi
 
 # 进程级超时（gtimeout/timeout 优先，缺则 perl alarm 兜底）
+# 超时把子进程放进**独立进程组**，到点杀整个组——否则只杀 claude 会把它的
+# python 子进程（last30days/cover）甩成孤儿挂到 PID 1 继续跑。gtimeout/timeout 默认
+# 只杀直接子进程，同样会留孤儿，所以统一走 perl 进程组方案（perl 在 macOS/Linux 都有）。
 run_with_timeout() {
   local secs="$1"; shift
-  local timeout_bin=""
-  if command -v gtimeout >/dev/null 2>&1; then timeout_bin="gtimeout"
-  elif command -v timeout >/dev/null 2>&1; then timeout_bin="timeout"; fi
-  if [ -n "$timeout_bin" ]; then
-    "$timeout_bin" "$secs" "$@"
-  else
-    perl -e '
-      my $secs = shift; my $pid = fork();
-      if ($pid == 0) { exec @ARGV; exit 127; }
-      local $SIG{ALRM} = sub { kill "KILL", $pid; waitpid($pid, 0); exit 124; };
-      alarm $secs; waitpid($pid, 0);
-      my $status = $?;
-      my $signal = $status & 127;
-      exit(128 + $signal) if $signal;
-      exit($status >> 8);
-    ' "$secs" "$@"
-  fi
+  perl -e '
+    use POSIX qw(setpgid);
+    my $secs = shift;
+    my $pid = fork();
+    if ($pid == 0) { setpgid(0, 0); exec @ARGV; exit 127; }
+    setpgid($pid, $pid);  # 父子都设一次，规避竞态；任一成功即可
+    local $SIG{ALRM} = sub { kill("KILL", -$pid); waitpid($pid, 0); exit 124; };
+    alarm $secs;
+    waitpid($pid, 0);
+    my $status = $?;
+    my $signal = $status & 127;
+    exit(128 + $signal) if $signal;
+    exit($status >> 8);
+  ' "$secs" "$@"
 }
 
 echo "[episode] $DATE slot=$SLOT timeout=${TIMEOUT_SECS}s log=$LOG" >&2
