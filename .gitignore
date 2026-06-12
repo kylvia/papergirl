@@ -38,3 +38,8 @@ state/.console-agent-id
 
 # Claude Code 本地权限白名单（机器本地，不入库）
 .claude/settings.local.json
+
+.history
+
+# Python 字节码缓存（上游 last30days 曾误提交，已 untrack）
+__pycache__/
