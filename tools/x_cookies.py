@@ -26,10 +26,42 @@ LAST30DAYS_LIB = ROOT / ".claude" / "skills" / "last30days" / "scripts"
 OUT = ROOT / "state" / "x-cookies.env"
 WANT = ["auth_token", "ct0"]
 X_DOMAIN = ".x.com"
+CHROME_BASE = Path.home() / "Library" / "Application Support" / "Google" / "Chrome"
 
 
 def mask(v: str) -> str:
     return f"{v[:2]}…{v[-2:]} (len={len(v)})" if len(v) > 6 else f"(len={len(v)})"
+
+
+def _chrome_cookie_dbs() -> list:
+    """Chrome 多 profile 候选库，最近使用的排前面。
+
+    上游 chrome_cookies.py 只看写死的 Default/Cookies；登录态在
+    「Profile N」时（多账号 Chrome 很常见）会直接提取不到。这里自己扫，
+    逐个试，不改 vendored 库。
+    """
+    if not CHROME_BASE.is_dir():
+        return []
+    dbs = [c / "Cookies" for c in CHROME_BASE.iterdir()
+           if c.name == "Default" or c.name.startswith("Profile")]
+    dbs = [d for d in dbs if d.is_file()]
+    return sorted(dbs, key=lambda d: d.stat().st_mtime, reverse=True)
+
+
+def _extract(browser: str):
+    """带 Chrome 多 profile 支持的提取；返回 (cookies, source) 或 None。"""
+    from lib import chrome_cookies
+    from lib.cookie_extract import extract_cookies_with_source
+
+    if browser in ("auto", "chrome"):
+        for db in _chrome_cookie_dbs():
+            chrome_cookies.CHROME_COOKIES_DB = db
+            result = extract_cookies_with_source("chrome", X_DOMAIN, WANT)
+            if result and "auth_token" in (result[0] or {}):
+                return result[0], f"chrome:{db.parent.name}"
+        if browser == "chrome":
+            return None
+    return extract_cookies_with_source(browser, X_DOMAIN, WANT)
 
 
 def main() -> int:
@@ -41,11 +73,9 @@ def main() -> int:
 
     sys.path.insert(0, str(LAST30DAYS_LIB))
     try:
-        from lib.cookie_extract import extract_cookies_with_source
-    except Exception as e:
+        result = _extract(args.browser)
+    except ImportError as e:
         sys.exit(f"error: 无法加载 last30days cookie 模块（{LAST30DAYS_LIB}）：{e}")
-
-    result = extract_cookies_with_source(args.browser, X_DOMAIN, WANT)
     if not result:
         sys.exit(
             "error: 没提取到 X cookie。检查：1) 是否 macOS；2) 用 --browser 指定的浏览器"

@@ -75,12 +75,16 @@ python3 tools/push.py drafts/<x>.md --dry-run --verbose
 
 | 档 | schedule id | cron(UTC) | 北京 | 草稿就绪 | 建议群发窗口 |
 |---|---|---|---|---|---|
-| am | 41ab8208 | `30 23 * * *` | 07:30 | ~08:15 | 午间 12:00–13:00 |
-| pm | 7b74d653 | `30 8 * * *` | 16:30 | ~17:15 | 晚间 20:00–21:30（最强开篇时段） |
+| am | 5f949bc6 | `30 23 * * *` | 07:30 | ~08:15 | 午间 12:00–13:00 |
+| pm | 8fbbcc54 | `30 8 * * *` | 16:30 | ~17:15 | 晚间 20:00–21:30（最强开篇时段） |
 
-外加催数据档 d14ba169（北京 11:00）。paseo 任务只跑 runner 并汇报。pm 档晚跑，蹭当天最新 AI 新闻。两档靠 published.json 7 天去重，pm 自动避开 am 已发主题。查看：`paseo schedule ls --json`。
+外加催数据档 7ef5a9d1（北京 11:00）。2026-06-12 迁移到新 Mac 后重建（旧 id 41ab8208/7b74d653/d14ba169 作废）；本机走 Paseo 桌面版 daemon，定时档用 MCP 工具（`mcp__paseo__*`）或 `paseo` CLI 管理（CLI 来源见下坑）。paseo 任务只跑 runner 并汇报。pm 档晚跑，蹭当天最新 AI 新闻。两档靠 published.json 7 天去重，pm 自动避开 am 已发主题。查看：`paseo schedule ls --json`。
 
 **坑（2026-06-12 踩过）**：建 claude provider 的 schedule 必须 `--mode bypassPermissions`，**不是** `full-access`（那是 codex 的模式）。paseo 创建时不校验、到运行才报 `Invalid mode`，会让任务建好却从不真跑。排查：`paseo schedule logs <id>` 看 ERROR；修：`paseo schedule update <id> --mode bypassPermissions`。Mac 睡眠会错过定时点，paseo 在唤醒后补跑（时间不精确但不丢）。
+
+**坑（CLI 来源，2026-06-12 新机踩过）**：`paseo` CLI **不在 npm**（npm 上的 `paseo` 是个无关 Next.js 包，装了是坑）。它随 Paseo.app 走，在 `/Applications/Paseo.app/Contents/Resources/bin/paseo`，`ln -sf` 到 PATH 即可（本机已链到 `/opt/homebrew/bin/paseo`）。`bin/console.sh` 依赖它；CLI 和 MCP 工具打的是同一个 daemon，两条路等价。
+
+**坑（网络瞬断，2026-06-12 night 踩过两次）**：episode 会因 Anthropic API `socket connection was closed unexpectedly` 在任意一步中途死（runner status=error，**非内容问题**）。session 完好、扫描/决策/简报已落盘——别从头重扫，用 runner 结束打印的 `claude --resume <session_id>`，喂一句「从第 N 步继续、别重选题/重扫」即可续到推草稿箱。网络在抽风时连 resume 也会接着撞，等网络稳再续。
 
 ## 增长闭环（北极星=质量加权）
 
@@ -129,6 +133,8 @@ python3 tools/x_cookies.py --check  # 只验证不写文件
 ```
 
 之后 episode-runner 自动 source，X 信号并入 last30days。失效了重跑即可；episode 取不到也只是降级跳过 X，不卡死。
+
+**现状坑（2026-06-12）**：cookie 提取本身 OK，但 vendored last30days 的 bird-search 在本机 Node v23 上 `import … with { type: 'json' }` 语法报错，**X 源实际返回 0、仍降级跳过**——cookie 配好了也暂时没真接上，待修（升级该模块或换 Node 跑 last30days）。两个提取坑也已沉淀进 `tools/x_cookies.py`：①登录态常不在 Chrome `Default` profile（脚本已扫全部 profile 按最近使用排序逐个试）；②首次取 Keychain 密钥有 10s 超时，来不及点授权就先手动 `security find-generic-password -w -s "Chrome Safe Storage" >/dev/null` 弹窗点允许再跑。
 
 约束与权衡：
 - 仅 macOS。首次提取 Keychain 可能弹窗，点允许。`--browser` 可指定 chrome/brave/firefox/safari/auto。
