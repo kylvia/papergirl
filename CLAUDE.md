@@ -27,6 +27,10 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `voice.md` | 声音档（人设/视角/文章原型/范文库/四层闸门） | 调文风改这里，写稿阶段硬约束 |
 | `prompts/episode.md` | episode 任务书（流程本体） | 调流程改这里，不是改代码 |
 | `bin/episode-runner.sh` | spawn claude + 抓 session_id + 落运行记录 | 唯一 runner |
+| `bin/bootstrap.sh` | 新机/迁移一键重建（依赖+schedule+控制台 agent），幂等 | 自有代码 |
+| `bin/doctor.sh` | 体检：把"坑"变成会报警的守卫，绿=经验在守 | 自有代码 |
+| `schedules.yaml` | 定时档声明源真相（不写死 id） | 人改这里，再 bootstrap 对齐 |
+| `tools/schedules.py` | schedule 对账引擎（apply/check，bootstrap+doctor 共用） | 自有代码 |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
 | `tools/push.py` | 推草稿（注入 per-process 微信代理） | 自有代码 |
 | `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
@@ -54,6 +58,10 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 ## 常用命令
 
 ```bash
+# 新机/迁移/灾后一键重建（幂等）；日常体检
+bin/bootstrap.sh
+bin/doctor.sh
+
 # 手动跑一期（全流程但不真推）
 bin/episode-runner.sh --slot am --dry-run
 
@@ -71,20 +79,32 @@ python3 tools/cover.py --title "测试" --out /tmp/c.png --dry-run
 python3 tools/push.py drafts/<x>.md --dry-run --verbose
 ```
 
-## Paseo 双更接入（已挂）
+## Paseo 双更接入
 
-| 档 | schedule id | cron(UTC) | 北京 | 草稿就绪 | 建议群发窗口 |
-|---|---|---|---|---|---|
-| am | 5f949bc6 | `30 23 * * *` | 07:30 | ~08:15 | 午间 12:00–13:00 |
-| pm | 8fbbcc54 | `30 8 * * *` | 16:30 | ~17:15 | 晚间 20:00–21:30（最强开篇时段） |
+定时档的**声明源真相是 [`schedules.yaml`](schedules.yaml)**（am/pm/催数据三档：cron、mode、prompt 都在那）。
+**不在这里手写 schedule id**——id 由 paseo 运行时分配、迁移即作废（这张表以前就是这么腐烂的，
+2026-06-12 迁移新机被它坑过）。现网 id/状态现查 `paseo schedule ls`；改档改 `schedules.yaml` 后跑
+`bin/bootstrap.sh`（或 `python3 tools/schedules.py apply`）让 paseo 对齐。
 
-外加催数据档 7ef5a9d1（北京 11:00）。2026-06-12 迁移到新 Mac 后重建（旧 id 41ab8208/7b74d653/d14ba169 作废）；本机走 Paseo 桌面版 daemon，定时档用 MCP 工具（`mcp__paseo__*`）或 `paseo` CLI 管理（CLI 来源见下坑）。paseo 任务只跑 runner 并汇报。pm 档晚跑，蹭当天最新 AI 新闻。两档靠 published.json 7 天去重，pm 自动避开 am 已发主题。查看：`paseo schedule ls --json`。
+| 档 | 北京时 | 草稿就绪 | 建议群发窗口 |
+|---|---|---|---|
+| am | 07:30 | ~08:15 | 午间 12:00–13:00 |
+| pm | 16:30 | ~17:15 | 晚间 20:00–21:30（最强开篇时段） |
 
-**坑（2026-06-12 踩过）**：建 claude provider 的 schedule 必须 `--mode bypassPermissions`，**不是** `full-access`（那是 codex 的模式）。paseo 创建时不校验、到运行才报 `Invalid mode`，会让任务建好却从不真跑。排查：`paseo schedule logs <id>` 看 ERROR；修：`paseo schedule update <id> --mode bypassPermissions`。Mac 睡眠会错过定时点，paseo 在唤醒后补跑（时间不精确但不丢）。
+pm 晚跑蹭当天最新 AI 新闻，靠 published.json 7 天去重自动避开 am 主题；催数据档北京 11:00。
+paseo 任务只跑 runner 并汇报。
 
-**坑（CLI 来源，2026-06-12 新机踩过）**：`paseo` CLI **不在 npm**（npm 上的 `paseo` 是个无关 Next.js 包，装了是坑）。它随 Paseo.app 走，在 `/Applications/Paseo.app/Contents/Resources/bin/paseo`，`ln -sf` 到 PATH 即可（本机已链到 `/opt/homebrew/bin/paseo`）。`bin/console.sh` 依赖它；CLI 和 MCP 工具打的是同一个 daemon，两条路等价。
+**运维入口（坑已变守卫，别再靠人记）**：
+- 新机/迁移/灾后一键重建：`bin/bootstrap.sh`（幂等，装齐依赖+对齐 schedule+建控制台 agent）。
+- 日常体检：`bin/doctor.sh`（绿=经验在守；红=硬故障）。原先一堆「(日期 踩过)」的口述坑——
+  schedule 必须 bypassPermissions、paseo CLI 随 Paseo.app 走（npm 同名包是坑）、.env 须 0600——
+  现在都编码进 `schedules.yaml`/`tools/schedules.py`/`bin/bootstrap.sh` 并由 doctor 守着，详见各自注释。
 
-**坑（网络瞬断，2026-06-12 night 踩过两次）**：episode 会因 Anthropic API `socket connection was closed unexpectedly` 在任意一步中途死（runner status=error，**非内容问题**）。session 完好、扫描/决策/简报已落盘——别从头重扫，用 runner 结束打印的 `claude --resume <session_id>`，喂一句「从第 N 步继续、别重选题/重扫」即可续到推草稿箱。网络在抽风时连 resume 也会接着撞，等网络稳再续。
+**仍要人脑记的两条**（编不进代码）：
+- Mac 睡眠会错过定时点，paseo 唤醒后补跑（时间不精确但不丢）。要随时可用就别让 Mac 休眠。
+- episode 偶遇 Anthropic API `socket closed`/`ECONNRESET` 会中途死（status=error，**非内容问题**）。
+  session 完好、扫描/选题/简报已落盘——用 runner 打印的 `claude --resume <session_id>` 从写稿续，别重扫；
+  网络在抽风时连 resume 也接着撞，等链路稳再续。
 
 ## 增长闭环（北极星=质量加权）
 

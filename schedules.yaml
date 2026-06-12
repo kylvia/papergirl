@@ -1,0 +1,32 @@
+# papergirl 定时档 —— 声明式源真相（Single Source of Truth）。
+#
+# 改这里 → 跑 `bin/bootstrap.sh`（或 `python3 tools/schedules.py apply`），
+# paseo 现网就会对齐到这份声明。**不要手写 schedule id**——id 由 paseo 运行时
+# 分配、必随迁移作废（CLAUDE.md 那张写死 id 的表就是这么腐烂的）。现网 id 现查：
+#   paseo schedule ls
+#
+# 校验现网是否符合本声明： python3 tools/schedules.py check   （doctor.sh 会跑）
+
+defaults:
+  provider: claude
+  # 坑（血泪）：claude provider 的 schedule 必须 bypassPermissions，**不是** full-access
+  # （那是 codex 的模式）。paseo 创建时不校验、到运行才报 Invalid mode，任务建好却从不真跑。
+  # 这条约束现在由 tools/schedules.py 在 apply/check 两端强制，不再靠人记。
+  mode: bypassPermissions
+  timezone: UTC          # cron 一律按 UTC 写，注释标北京时
+
+schedules:
+  - name: papergirl am 档
+    cron: "30 23 * * *"        # 北京 07:30；草稿 ~08:15 就绪；建议午间 12:00–13:00 群发
+    prompt: |-
+      执行 bin/episode-runner.sh --slot am，前台等它跑完（最长约 40 分钟，不要后台化、不要提前结束）。结束后用一两句话汇报 runner 输出的 status、标题、media_id；失败则贴出日志里的关键错误行。除了跑 runner 和汇报，不要做任何其他事。
+
+  - name: papergirl pm 档
+    cron: "30 8 * * *"         # 北京 16:30；草稿 ~17:15 就绪；建议晚间 20:00–21:30 群发（最强开篇时段）
+    prompt: |-
+      执行 bin/episode-runner.sh --slot pm，前台等它跑完（最长约 40 分钟，不要后台化、不要提前结束）。结束后用一两句话汇报 runner 输出的 status、标题、media_id；失败则贴出日志里的关键错误行。除了跑 runner 和汇报，不要做任何其他事。
+
+  - name: papergirl 催数据
+    cron: "0 3 * * *"          # 北京 11:00
+    prompt: |-
+      执行 python3 tools/metrics_nudge.py，一句话汇报输出（催了哪些文章/无需催）。不要做任何其他事。
