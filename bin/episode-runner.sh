@@ -21,7 +21,10 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 # ~/.local/bin 优先于 homebrew：uv 管理的 python3.13/3.14 自带完好 expat，
 # 而 brew 的 python@3.14 bottle 在本机 pyexpat 符号缺失（last30days Reddit RSS 会降级）
-export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$HOME/.bun/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# nvm 最新 node 紧跟其后，盖过 /usr/local/bin/node（本机是 v16，太老跑不了 bird-search 的
+# `import ... with {type:'json'}`，X 源会静默返 0——2026-06-13 查实，曾被误诊为"v23 不兼容"）
+NVM_NODE_BIN="$(ls -d "$HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -V | tail -1)"
+export PATH="$HOME/.local/bin:${NVM_NODE_BIN:+$NVM_NODE_BIN:}/usr/local/bin:/opt/homebrew/bin:$HOME/.bun/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
 # X 源 cookie（可选）：tools/x_cookies.py 生成后在此 source，喂给 last30days

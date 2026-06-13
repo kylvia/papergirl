@@ -154,7 +154,8 @@ python3 tools/x_cookies.py --check  # 只验证不写文件
 
 之后 episode-runner 自动 source，X 信号并入 last30days。失效了重跑即可；episode 取不到也只是降级跳过 X，不卡死。
 
-**现状坑（2026-06-12）**：cookie 提取本身 OK，但 vendored last30days 的 bird-search 在本机 Node v23 上 `import … with { type: 'json' }` 语法报错，**X 源实际返回 0、仍降级跳过**——cookie 配好了也暂时没真接上，待修（升级该模块或换 Node 跑 last30days）。两个提取坑也已沉淀进 `tools/x_cookies.py`：①登录态常不在 Chrome `Default` profile（脚本已扫全部 profile 按最近使用排序逐个试）；②首次取 Keychain 密钥有 10s 超时，来不及点授权就先手动 `security find-generic-password -w -s "Chrome Safe Storage" >/dev/null` 弹窗点允许再跑。
+**修正（2026-06-13，曾误诊别再踩）**：早先决策记录把"X 返回 0"归因为"bird-search 在 Node v23 语法不兼容、待修"——**查实是误诊**。X 在 v23 完全正常（`search_x` 实拉 12 条）。真因是本机有两个 node：episode-runner 旧 PATH 让 `node` 解析到 `/usr/local/bin/node`（**v16**，太老跑不了 `import … with {type:'json'}`），bird-search 静默返 0；当晚那次还叠加"扫描时 cookie 尚未提取"。已修：episode-runner 把 nvm 最新 node 插到 /usr/local/bin 之前；`bin/doctor.sh` 加 node≥18 守卫，`bin/doctor.sh --x` 真拉一次验证 X。教训：**别信 agent 对失败原因的口头归因，复现了再下结论**。
+两个 cookie 提取坑沉淀在 `tools/x_cookies.py`：①登录态常不在 Chrome `Default` profile（脚本扫全部 profile 按最近使用逐个试）；②首次取 Keychain 密钥有 10s 超时，来不及点就先手动 `security find-generic-password -w -s "Chrome Safe Storage" >/dev/null` 弹窗点允许再跑。
 
 约束与权衡：
 - 仅 macOS。首次提取 Keychain 可能弹窗，点允许。`--browser` 可指定 chrome/brave/firefox/safari/auto。
