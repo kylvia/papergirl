@@ -14,8 +14,7 @@ set -uo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 ID_FILE="$REPO/state/.console-agent-id"
-# paseo CLI 是 /opt/homebrew/bin 下指向 Paseo.app 自带 bin/paseo 的 symlink，不依赖特定 node 版本
-export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+. "$REPO/bin/_env.sh"   # 统一 PATH（paseo 在 /opt/homebrew，symlink 到 Paseo.app 自带 bin/paseo）
 
 PROMPT='你是 papergirl 项目的「控制台」助手，工作目录就是本项目根。我可能从手机（Paseo App）或终端找你，用来远程运营这个 AI 内容公众号。按我说的话判断意图，拿不准先问一句、别瞎操作。能干这四类：
 

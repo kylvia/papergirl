@@ -5,9 +5,7 @@
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"; cd "$REPO"
 XPROBE=0; [ "${1:-}" = "--x" ] && XPROBE=1   # --x：额外真拉一次 X，验证实际通不通（慢、走网络）
-# 与 episode-runner 一致：nvm 最新 node 盖过 /usr/local/bin 的老 node（v16，X 源需要 ≥18）
-NVM_NODE_BIN="$(ls -d "$HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -V | tail -1)"
-export PATH="$HOME/.local/bin:${NVM_NODE_BIN:+$NVM_NODE_BIN:}/opt/homebrew/bin:/usr/local/bin:$PATH"
+. "$REPO/bin/_env.sh"
 
 G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; N=$'\033[0m'
 fails=0

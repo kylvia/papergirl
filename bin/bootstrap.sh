@@ -6,7 +6,7 @@
 # 前提：已装 Paseo 桌面版（提供 daemon）+ claude CLI + python3；.env 已填好凭证。
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"; cd "$REPO"
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+. "$REPO/bin/_env.sh"
 G=$'\033[32m'; R=$'\033[31m'; N=$'\033[0m'
 say() { printf "${G}%s${N}\n" "$1"; }
 die() { printf "${R}✗ %s${N}\n" "$1" >&2; exit 1; }

@@ -31,6 +31,7 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `bin/doctor.sh` | 体检：把"坑"变成会报警的守卫，绿=经验在守 | 自有代码 |
 | `bin/status.sh` | 一屏状态（今日运行/草稿箱/下次/待喂/X），接手先跑 | 自有代码 |
 | `tools/status.py` | status.sh 的引擎（只读盘上文件 + paseo ls） | 自有代码 |
+| `bin/_env.sh` | 统一 PATH（nvm 最新 node 等），被各脚本 source；改环境只改这里 | 自有代码 |
 | `schedules.yaml` | 定时档声明源真相（不写死 id） | 人改这里，再 bootstrap 对齐 |
 | `tools/schedules.py` | schedule 对账引擎（apply/check，bootstrap+doctor 共用） | 自有代码 |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
