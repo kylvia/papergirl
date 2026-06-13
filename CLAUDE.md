@@ -100,11 +100,13 @@ paseo 任务只跑 runner 并汇报。
   schedule 必须 bypassPermissions、paseo CLI 随 Paseo.app 走（npm 同名包是坑）、.env 须 0600——
   现在都编码进 `schedules.yaml`/`tools/schedules.py`/`bin/bootstrap.sh` 并由 doctor 守着，详见各自注释。
 
-**仍要人脑记的两条**（编不进代码）：
-- Mac 睡眠会错过定时点，paseo 唤醒后补跑（时间不精确但不丢）。要随时可用就别让 Mac 休眠。
-- episode 偶遇 Anthropic API `socket closed`/`ECONNRESET` 会中途死（status=error，**非内容问题**）。
-  session 完好、扫描/选题/简报已落盘——用 runner 打印的 `claude --resume <session_id>` 从写稿续，别重扫；
-  网络在抽风时连 resume 也接着撞，等链路稳再续。
+**网络瞬断已自动兜底**：episode 遇 API `socket closed`/`ECONNRESET` 中途死时，runner 会自动
+识别瞬态错误、`--resume` 同 session 从盘上产物断点续跑（不重扫/不重选题），靠 published.json 防重复推，
+退避重试 `EPISODE_MAX_RESUMES` 次（默认 3，退避基数 `EPISODE_RESUME_BACKOFF` 秒）。只有非瞬态错误或
+重试耗尽才报 status=error——那时再人工 `claude --resume <session_id>`（runner 末尾会打印）。
+阶段从固定名产物推断（decision/brief/gates.md + published.json），配图阶段名不可见、resume 会重生成封面（廉价幂等）。
+
+**仍要人脑记的一条**（编不进代码）：Mac 睡眠会错过定时点，paseo 唤醒后补跑（时间不精确但不丢）。要随时可用就别让 Mac 休眠。
 
 ## 增长闭环（北极星=质量加权）
 

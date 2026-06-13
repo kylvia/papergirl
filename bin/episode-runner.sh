@@ -79,19 +79,90 @@ run_with_timeout() {
 
 echo "[episode] $DATE slot=$SLOT timeout=${TIMEOUT_SECS}s log=$LOG" >&2
 : > "$LOG"
-run_with_timeout "$TIMEOUT_SECS" "$CLAUDE_BIN" \
-  -p "$PROMPT" \
-  --output-format stream-json --verbose \
-  --dangerously-skip-permissions \
-  >> "$LOG" 2>&1 < /dev/null
-rc=$?
 
-# 预初始化，避免 set -u 下 read 未填满某字段时变量未绑定
-STATUS=""; SESSION=""; TITLE=""; MEDIA=""
-IFS=$'\t' read -r STATUS SESSION TITLE MEDIA <<EOF
+# ---- 抗瞬态网络 + 阶段 checkpoint ----
+# episode 是单个 claude -p 会话；socket 一断整轮判死。这里不重扫，而是 --resume 同
+# session 从盘上产物的断点续跑，只对**瞬态**错误自动重试，并用 published.json 防重复推。
+MAX_RESUMES="${EPISODE_MAX_RESUMES:-3}"
+RUN_PREFIX="$RUN_DIR/$DATE-$SLOT"
+
+already_pushed() {  # published.json 有今天本档记录 = 已真推成功（防 resume 二次推）
+  python3 - "$DATE" "$SLOT" <<'PY'
+import json, sys
+try:
+    d = json.load(open("state/published.json"))
+except Exception:
+    sys.exit(1)
+sys.exit(0 if any(e.get("date") == sys.argv[1] and e.get("slot") == sys.argv[2] for e in d) else 1)
+PY
+}
+
+current_phase() {  # 从盘上产物推断最远完成阶段（固定名产物，episode.md 每步必写）
+  already_pushed                   && { echo pushed;     return; }
+  [ -f "$RUN_PREFIX-gates.md" ]    && { echo written;    return; }
+  [ -f "$RUN_PREFIX-brief.md" ]    && { echo researched; return; }
+  [ -f "$RUN_PREFIX-decision.md" ] && { echo picked;     return; }
+  echo start
+}
+
+is_transient() {  # 值得自动 resume 的瞬态错误；区别于真·内容/逻辑失败
+  tail -c 6000 "$LOG" 2>/dev/null | grep -qiE \
+    'socket connection was closed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|Unable to connect to API|fetch failed|terminated unexpectedly|network error|503|overloaded|stream (error|disconnected)'
+}
+
+resume_prompt() {  # 续跑指令：从断点接着跑，绝不重做/重选题/重复推
+  [ "$DRY_RUN" = "1" ] && printf '%s\n\n' '**🚧 DRY-RUN（本次必须遵守）**：第 6 步推送必须带 `--dry-run`，最终 JSON 的 status 写 "dry-run"、media_id 留空。'
+  cat <<EOF
+上一轮本会话因瞬态错误中断（多为 API 网络断流），现已恢复。盘上产物（state/runs/$DATE-$SLOT-*.md、drafts/）都有效，**别重做已完成步骤、别重新选题/重扫**。
+
+先自查：若 state/published.json 已有 date=$DATE slot=$SLOT 的记录，说明已推成功，**直接输出第 7 步那行最终 JSON 收尾，不要再推**。否则从断点继续，依次走完到推草稿箱→更新 published.json→末行 JSON。检测到的最远完成阶段：$1。
+
+硬规则照旧：全程前台同步、不后台化、不输出末行 JSON 前不结束本轮。DATE=$DATE SLOT=$SLOT。
+EOF
+}
+
+STATUS=""; SESSION=""; TITLE=""; MEDIA=""; rc=1
+attempt=0
+while : ; do
+  if [ "$attempt" -eq 0 ]; then
+    run_with_timeout "$TIMEOUT_SECS" "$CLAUDE_BIN" \
+      -p "$PROMPT" \
+      --output-format stream-json --verbose \
+      --dangerously-skip-permissions \
+      >> "$LOG" 2>&1 < /dev/null
+    rc=$?
+  else
+    PH="$(current_phase)"
+    echo "[episode] 瞬态失败，自动 resume（第 $attempt/$MAX_RESUMES 次，phase=$PH，session=$SESSION）" >&2
+    run_with_timeout "$TIMEOUT_SECS" "$CLAUDE_BIN" \
+      --resume "$SESSION" -p "$(resume_prompt "$PH")" \
+      --output-format stream-json --verbose \
+      --dangerously-skip-permissions \
+      >> "$LOG" 2>&1 < /dev/null
+    rc=$?
+  fi
+
+  # 复用 claude_session.py 解析当前状态（每次覆盖写 RECORD）
+  STATUS=""; SESSION_NEW=""; TITLE=""; MEDIA=""
+  IFS=$'\t' read -r STATUS SESSION_NEW TITLE MEDIA <<EOF
 $(python3 tools/claude_session.py record --log "$LOG" --out "$RECORD" --date "$DATE" --slot "$SLOT" --rc "$rc")
 EOF
-STATUS="${STATUS:-}"; SESSION="${SESSION:-}"; TITLE="${TITLE:-}"; MEDIA="${MEDIA:-}"
+  STATUS="${STATUS:-}"; TITLE="${TITLE:-}"; MEDIA="${MEDIA:-}"
+  [ -n "$SESSION_NEW" ] && [ "$SESSION_NEW" != "-" ] && SESSION="$SESSION_NEW"
+
+  case "$STATUS" in pushed|dry-run|skipped) break ;; esac   # 正常收尾
+  already_pushed && { STATUS="pushed"; break; }              # 没出末行 JSON 但已真推 → 视为成功
+
+  # 失败：瞬态 + 有额度 + 有 session 可续 → 退避后 resume；否则认账
+  if [ "$attempt" -lt "$MAX_RESUMES" ] && [ -n "$SESSION" ] && [ "$SESSION" != "-" ] && is_transient; then
+    attempt=$((attempt + 1))
+    backoff=$((attempt * ${EPISODE_RESUME_BACKOFF:-30}))
+    echo "[episode] 瞬态错误，${backoff}s 后第 $attempt 次 resume …" >&2
+    sleep "$backoff"
+    continue
+  fi
+  break
+done
 
 echo "[episode] rc=$rc status=${STATUS} title=${TITLE} media_id=${MEDIA}"
 echo "[episode] record: $RECORD"
