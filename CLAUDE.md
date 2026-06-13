@@ -29,6 +29,8 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `bin/episode-runner.sh` | spawn claude + 抓 session_id + 落运行记录 | 唯一 runner |
 | `bin/bootstrap.sh` | 新机/迁移一键重建（依赖+schedule+控制台 agent），幂等 | 自有代码 |
 | `bin/doctor.sh` | 体检：把"坑"变成会报警的守卫，绿=经验在守 | 自有代码 |
+| `bin/status.sh` | 一屏状态（今日运行/草稿箱/下次/待喂/X），接手先跑 | 自有代码 |
+| `tools/status.py` | status.sh 的引擎（只读盘上文件 + paseo ls） | 自有代码 |
 | `schedules.yaml` | 定时档声明源真相（不写死 id） | 人改这里，再 bootstrap 对齐 |
 | `tools/schedules.py` | schedule 对账引擎（apply/check，bootstrap+doctor 共用） | 自有代码 |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
@@ -58,6 +60,8 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 ## 常用命令
 
 ```bash
+# 接手先看一屏状态（今天跑了吗/草稿箱/下次几点/该喂哪篇/X 通不通）
+bin/status.sh
 # 新机/迁移/灾后一键重建（幂等）；日常体检
 bin/bootstrap.sh
 bin/doctor.sh
