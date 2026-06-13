@@ -59,9 +59,10 @@
   每个断点的来源二选一，按信息量取高者：
   a) **官方图表 / 产品截图 / 来源页主图**：有现成高信息量图时优先（benchmark 图、定价页、产品界面）。必须先下载到 drafts/ 本地再引用，图片下方加一行来源说明（如「图源：Anthropic 官方博客」）
   b) **生成信息图**（无现成图、或需要跨来源提炼对比时；统一 figure preset 保账号识别度）：选型阶梯——数据图（数字对比/时间线）> 概念结构图（版本关系/流程）> 场景插图（画面级事例白板速写）。
-     `python3 tools/cover.py --style figure --title "<图要表达的一句话>" --subtitle "<补充>" --bullets "<标签1>" --bullets "<标签2>" --out drafts/{DATE}-<slug>-fig-<n>.png`，用返回的 path 引用
+     再按内容形状选版式 `--layout`：两方/前后对照 `binary-comparison`；多对象×多维度 `comparison-matrix`；流程/时间线 `linear-progression`；层级/架构 `hierarchical-layers`；多指标快照 `dashboard`；表象vs深层 `iceberg`（反差揭示型文章首选）。都不贴切就不传 --layout，走通用规则。
+     `python3 tools/cover.py --style figure --layout <版式> --title "<图要表达的一句话>" --subtitle "<补充>" --bullets "<标签1>" --bullets "<标签2>" --out drafts/{DATE}-<slug>-fig-<n>.png`，用返回的 path 引用
   位置：图紧跟它所支撑的段落；两图不相邻；首段之前不放图。
-  失败降级：生成图失败 → 重试 1 次 → 减 bullets 简化再试 → 换官方图/截图 → 仍无可用图才接受低于底线发稿，并在最终 JSON 的 reason 注明
+  失败降级：生成图失败 → 重试 1 次 → 减 bullets 简化再试（每次生图已把最终 prompt 落盘成与图同名的 .prompt.md，直接改它再 `--prompt-file` 重跑，比重拼参数稳）→ 换官方图/截图 → 仍无可用图才接受低于底线发稿，并在最终 JSON 的 reason 注明
 - 正文如引用外部图片（来源页截图等），必须先下载到 drafts/ 再以本地路径引用——推送走微信代理，外域请求会被代理 403
 
 ## 6. 推草稿箱
@@ -69,7 +70,7 @@
 - `python3 tools/push.py drafts/{DATE}-<slug>.md --title "<标题>" --summary "<摘要>" --cover <封面path> --verbose`
 - 成功标准：拿到 media_id 且输出无占位图（WECHATIMGPH_）告警；有告警就修复后重推
 - 成功后更新 `state/published.json`：往数组追加一条，**含归因特征**（供效果复盘把数据归因到具体选题/文风）：
-  `{"date":"{DATE}","slot":"{SLOT}","title":..,"topic":..,"primary_url":..,"media_id":..,"beat":"<beats.yaml 里的赛道 id>","archetype":"<voice.md 五原型之一>","char_count":<正文字数>,"figure_count":<正文配图数>,"pick_trend":"<选题时该主题在 store trending 里的位置/热度，没有就 'cold'>"}`
+  `{"date":"{DATE}","slot":"{SLOT}","title":..,"topic":..,"primary_url":..,"media_id":..,"beat":"<beats.yaml 里的赛道 id>","archetype":"<voice.md 五原型之一>","char_count":<正文字数>,"figure_count":<正文配图数>,"figure_layouts":[<每张正文图一项：生成图记其 layout 名（没传 --layout 记 "generic"），官方图/截图记 "source">],"pick_trend":"<选题时该主题在 store trending 里的位置/热度，没有就 'cold'>"}`
 - archetype 按 voice.md 五原型的**定义**对号入座，并在 decision.md 留一句归类理由（发布解读型仅限新模型/产品发布；法律/行业事件多半是反差揭示型——2026-06-12 标错过一次，这个字段喂 review.py 归因，错了污染复盘）
 
 ## 7. 收尾

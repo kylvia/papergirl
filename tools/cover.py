@@ -8,12 +8,16 @@
 
 用法：
   python3 tools/cover.py --title "标题" [--subtitle "副标题"] [--summary "文章核心论点"] \
-      [--style minimal-tech|editorial] --out drafts/x.png
+      [--style minimal-tech|editorial|figure] [--layout binary-comparison|iceberg|...] --out drafts/x.png
   python3 tools/cover.py --prompt "完整生图 prompt" --out drafts/x.png
+  python3 tools/cover.py --prompt-file drafts/x.prompt.md --out drafts/x.png   # 改图重跑
   加 --dry-run 只渲染 prompt 不调 API。
 
+--layout 只对含 {layout_block} 的 preset（figure）生效，版式库见 tools/presets/layouts/。
+
 输出：最后一行 JSON，其中 "path" 是实际保存路径——扩展名按图片真实格式修正，
-后续引用必须用这个 path，不要用 --out 原样路径。
+后续引用必须用这个 path，不要用 --out 原样路径。每次调用都会先把最终 prompt
+落盘到与 --out 同名的 .prompt.md（可复现记录；改图时编辑它再 --prompt-file 重跑）。
 """
 import argparse
 import base64
@@ -36,6 +40,8 @@ PRESETS_DIR = Path(__file__).resolve().parent / 'presets'
 DEFAULT_MODEL = 'gpt-image-2'
 DEFAULT_ASPECT = '2.35:1'  # 公众号封面 900x383
 DEFAULT_BRAND_COLOR = '#8087EA'
+# 不指定 --layout 时 {layout_block} 的兜底（即 figure preset 原通用规则）
+DEFAULT_LAYOUT_BLOCK = '- 数字是主角：对比类用并排色块/柱状，流程类用箭头串联，关系类用分组圈选；数字字号明显大于标签。'
 
 
 def load_dotenv(path: Path) -> None:
@@ -76,7 +82,17 @@ def save_image_with_detected_ext(img: bytes, out_path: Path, declared_ext: str =
     return {'path': str(final_path), 'ext': ext}
 
 
-def build_prompt(title: str, subtitle: str, summary: str, bullets: list, style: str) -> str:
+def load_layout_block(layout: str) -> str:
+    if not layout:
+        return DEFAULT_LAYOUT_BLOCK
+    path = PRESETS_DIR / 'layouts' / f'{layout}.txt'
+    if not path.exists():
+        available = sorted(p.stem for p in (PRESETS_DIR / 'layouts').glob('*.txt'))
+        sys.exit(f'error: layout "{layout}" not found. available: {available}')
+    return path.read_text(encoding='utf-8').strip()
+
+
+def build_prompt(title: str, subtitle: str, summary: str, bullets: list, style: str, layout: str = '') -> str:
     path = PRESETS_DIR / f'{style}.txt'
     if not path.exists():
         available = sorted(p.stem for p in PRESETS_DIR.glob('*.txt'))
@@ -85,6 +101,8 @@ def build_prompt(title: str, subtitle: str, summary: str, bullets: list, style: 
     bullets_str = '、'.join(f'"• {b}"' for b in bullets) if bullets else '不要底部数据条'
     out = template
     for key, value in (
+        # layout_block 最先替换，块内可再引用 {brand_color} 等后续变量
+        ('layout_block', load_layout_block(layout)),
         ('title', title),
         ('subtitle', subtitle),
         ('summary', summary or subtitle or title),
@@ -194,22 +212,33 @@ def main() -> int:
     ap.add_argument('--summary', default='', help='文章核心论点，驱动封面视觉构思（不渲染到图上）')
     ap.add_argument('--bullets', action='append', default=[], help='可重复；底部数据条文字')
     ap.add_argument('--style', default='minimal-tech')
+    ap.add_argument('--layout', default='', help='正文信息图版式（tools/presets/layouts/ 下的文件名），只对含 {layout_block} 的 preset 生效')
     ap.add_argument('--prompt', default='', help='完整 prompt，给了就忽略 title/style 模板')
+    ap.add_argument('--prompt-file', default='', help='从文件读完整 prompt（通常是上次落盘的 .prompt.md）')
     ap.add_argument('--out', required=True)
     ap.add_argument('--timeout', type=int, default=180)
     ap.add_argument('--dry-run', action='store_true')
     args = ap.parse_args()
 
-    if not args.prompt and not args.title:
-        ap.error('need --title or --prompt')
-    prompt = args.prompt or build_prompt(args.title, args.subtitle, args.summary, args.bullets, args.style)
+    if not args.prompt and not args.prompt_file and not args.title:
+        ap.error('need --title, --prompt or --prompt-file')
+    if args.prompt_file:
+        prompt = Path(args.prompt_file).read_text(encoding='utf-8')
+    else:
+        prompt = args.prompt or build_prompt(args.title, args.subtitle, args.summary, args.bullets, args.style, args.layout)
+    prompt = prompt.strip()
+
+    # 生成前先落盘最终 prompt——可复现记录，改图时编辑后用 --prompt-file 重跑
+    prompt_path = Path(args.out).with_suffix('.prompt.md')
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text(prompt + '\n', encoding='utf-8')
 
     if args.dry_run:
-        print(json.dumps({'action': 'dry-run', 'prompt_length': len(prompt), 'out': args.out}, ensure_ascii=False))
+        print(json.dumps({'action': 'dry-run', 'prompt_length': len(prompt), 'prompt_path': str(prompt_path), 'out': args.out}, ensure_ascii=False))
         return 0
 
     result = generate_image(prompt, Path(args.out), timeout=args.timeout)
-    print(json.dumps({'action': 'generated', **result}, ensure_ascii=False))
+    print(json.dumps({'action': 'generated', 'prompt_path': str(prompt_path), **result}, ensure_ascii=False))
     return 0
 
 
