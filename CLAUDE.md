@@ -28,7 +28,7 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `prompts/episode.md` | episode 任务书（流程本体） | 调流程改这里，不是改代码 |
 | `bin/episode-runner.sh` | spawn claude + 抓 session_id + 落运行记录 | 唯一 runner |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
-| `tools/push.py` | 推草稿（注入 per-process 微信代理） | 自有代码 |
+| `tools/push.py` | 推草稿（注入 per-process 微信代理；文末自动追加 `assets/` 关注卡） | 自有代码 |
 | `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
 | `tools/metrics.py` | 效果数据回流（人工喂，个人订阅号无 API） | 自有代码 |
 | `tools/review.py` | 每周复盘：质量信号归因到赛道/原型 | 自有代码 |
@@ -40,6 +40,7 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `state/published.json` | 发文史，选题查重的事实源 | episode 自动追加 |
 | `state/runs/` | 每期决策记录/简报/日志/session_id | episode 自动写，gitignored |
 | `drafts/` | 文章与图片产物 | episode 自动写，gitignored |
+| `assets/` | 入库静态资源（文末关注卡 `follow-card.png` 等） | 人维护，入库 |
 
 ## 硬规则（episode agent 与维护者都必须遵守）
 

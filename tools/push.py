@@ -22,6 +22,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SDK = ROOT / 'vendor' / 'wechat-api' / 'wechat-api.ts'
+# 固定关注卡片：推送时自动追加到正文末尾，保证每篇文末都有引导关注图。
+# 入库于 assets/（非 gitignored），克隆即带；缺失则静默跳过，不阻塞推送。
+FOLLOW_CARD = ROOT / 'assets' / 'follow-card.png'
 
 # 微信代理偶发瞬时抖动（CONNECT 隧道中止）。只对这类网络层错误重试；
 # 撞到 40164 白名单 / 占位图 / token 这类逻辑错误立即失败，重试无意义。
@@ -62,6 +65,24 @@ def _run_with_retry(cmd: list, env: dict, retries: int, delay: int, verbose: boo
     return 1
 
 
+def build_push_markdown(md: Path, enabled: bool):
+    """在正文末尾追加固定关注卡片，返回 (要推送的 md, 待清理的临时文件 or None)。
+
+    临时文件写在原 md 同目录，保留 baseDir——正文里相对路径的配图引用不被破坏；
+    关注卡用绝对路径引用，与 baseDir 无关。幂等：正文已含关注卡（文件名命中）就原样推。
+    关注卡资源缺失时静默降级，不阻塞推送。
+    """
+    if not enabled or not FOLLOW_CARD.exists():
+        return md, None
+    text = md.read_text(encoding='utf-8')
+    if FOLLOW_CARD.name in text:
+        return md, None
+    footer = f'\n\n![扫码关注本公众号]({FOLLOW_CARD})\n'
+    out = md.with_suffix('.push.md')
+    out.write_text(text + footer, encoding='utf-8')
+    return out, out
+
+
 def load_dotenv(path: Path) -> None:
     if not path.exists():
         return
@@ -85,6 +106,7 @@ def main() -> int:
     ap.add_argument('--summary', default=None)
     ap.add_argument('--author', default=None)
     ap.add_argument('--dry-run', action='store_true', help='只本地渲染，不调微信 API')
+    ap.add_argument('--no-follow-card', action='store_true', help='本次推送不追加固定关注卡片')
     ap.add_argument('--verbose', action='store_true')
     args = ap.parse_args()
 
@@ -116,7 +138,11 @@ def main() -> int:
         for key in ('https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY'):
             env[key] = proxy
 
-    cmd = ['bun', str(SDK), str(md), '--theme', args.theme]
+    push_md, tmp = build_push_markdown(md, enabled=not args.no_follow_card)
+    if tmp is not None and args.verbose:
+        print(f'[push] 已在文末追加关注卡片 {FOLLOW_CARD.name}', file=sys.stderr)
+
+    cmd = ['bun', str(SDK), str(push_md), '--theme', args.theme]
     if args.cover:
         cmd += ['--cover', str(Path(args.cover).expanduser().resolve())]
     if args.title:
@@ -134,11 +160,15 @@ def main() -> int:
         print(f'$ {shown}  [{proxied}]', file=sys.stderr)
 
     # dry-run 是本地渲染，失败不该重试；真推时对代理瞬时抖动重试。
-    if args.dry_run:
-        return subprocess.call(cmd, env=env, cwd=str(ROOT))
-    retries = int(os.environ.get('PUSH_RETRIES', '3'))
-    delay = int(os.environ.get('PUSH_RETRY_DELAY', '60'))
-    return _run_with_retry(cmd, env, retries, delay, args.verbose)
+    try:
+        if args.dry_run:
+            return subprocess.call(cmd, env=env, cwd=str(ROOT))
+        retries = int(os.environ.get('PUSH_RETRIES', '3'))
+        delay = int(os.environ.get('PUSH_RETRY_DELAY', '60'))
+        return _run_with_retry(cmd, env, retries, delay, args.verbose)
+    finally:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
 
 
 if __name__ == '__main__':
