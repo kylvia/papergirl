@@ -35,6 +35,7 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `schedules.yaml` | 定时档声明源真相（不写死 id） | 人改这里，再 bootstrap 对齐 |
 | `tools/schedules.py` | schedule 对账引擎（apply/check，bootstrap+doctor 共用） | 自有代码 |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
+| `tools/fetch_source_image.py` | 从来源页抓高信息量源图（og:image/正文大图）落 drafts/，正文配图 a 路径优先；复用 cover.py 下载逻辑、走直连不碰微信代理 | 自有代码 |
 | `tools/push.py` | 推草稿（注入 per-process 微信代理） | 自有代码 |
 | `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
 | `tools/metrics.py` | 效果数据回流（人工喂，个人订阅号无 API） | 自有代码 |
