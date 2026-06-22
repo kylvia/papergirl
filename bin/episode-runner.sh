@@ -148,11 +148,13 @@ EOF
   case "$STATUS" in pushed|dry-run|skipped) break ;; esac   # 正常收尾
   already_pushed && { STATUS="pushed"; break; }              # 没出末行 JSON 但已真推 → 视为成功
 
-  # 失败：瞬态 + 有额度 + 有 session 可续 → 退避后 resume；否则认账
-  if [ "$attempt" -lt "$MAX_RESUMES" ] && [ -n "$SESSION" ] && [ "$SESSION" != "-" ] && is_transient; then
+  # 失败可续跑两类：①瞬态网络错(is_transient) ②干净退出但没收尾(STATUS=unknown/空——多为模型把生图丢后台后让出本轮，2026-06-21pm 踩过)
+  # resume_prompt 已含"不后台化"，续跑会纠正；真·内容/逻辑失败会带 error 等非空状态、不在此列
+  if [ "$attempt" -lt "$MAX_RESUMES" ] && [ -n "$SESSION" ] && [ "$SESSION" != "-" ] \
+     && { is_transient || [ "$STATUS" = "unknown" ] || [ -z "$STATUS" ]; }; then
     attempt=$((attempt + 1))
     backoff=$((attempt * ${EPISODE_RESUME_BACKOFF:-30}))
-    echo "[episode] 瞬态错误，${backoff}s 后第 $attempt 次 resume …" >&2
+    echo "[episode] 未正常收尾（status=${STATUS:-空} rc=$rc），${backoff}s 后第 $attempt 次 resume …" >&2
     sleep "$backoff"
     continue
   fi
