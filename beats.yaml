@@ -30,3 +30,27 @@ beats:
     name: AI 行业事件与争议
     desc: 公司动态、融资、监管、安全事件——只挑小白也会关心的，拒绝纯财经视角
     weight: low
+
+# ── 信息源 ──────────────────────────────────────────────────────────
+# episode 第 1 / 1.5 步读这里决定「扫哪些源」。换垂直时改这里，不动 prompt。
+sources:
+  # 主源：last30days skill（跨平台扫描，每个赛道跑一次）。
+  # 免费源 reddit/hackernews/github 零配置；x 需登录态 cookie，取不到自动降级跳过。
+  # 裁剪平台 = 删列表项（如非技术垂直可去掉 github）；platforms 里没列的源不扫。
+  last30days:
+    platforms: [reddit, hackernews, github, x]
+
+  # 补盲源：WebSearch 定向补 last30days 覆盖不到的源。
+  # 本账号用它补「国内 AI 资讯」盲区；换垂直就把 domains / query_templates / label / rationale
+  # 换成你赛道的权威源与检索式。整段不需要就 enabled: false。
+  web_supplement:
+    enabled: true
+    label: 国内              # 命中候选在决策记录里标 `源:<label>`
+    rationale: >
+      last30days 只扫西方英文平台（Reddit/HN/GitHub/X），国内 AI 信号基本进不来——
+      国产开源模型靠 GitHub/X 还能捞到，但国产闭源产品、应用动态、国内政策与行业事件是盲区。
+    domains: [jiqizhixin.com, qbitai.com, 36kr.com]   # 机器之心 / 量子位 / 36氪
+    # WebSearch query 示例（按当期赛道调整；2-3 条够了别铺开）：
+    query_templates:
+      - "量子位 国产大模型 本周 最新"
+      - "site:jiqizhixin.com 大模型 发布"
