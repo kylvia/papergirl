@@ -16,5 +16,4 @@ for the full text.
 
 `baoyu-skills` itself is published without an explicit top-level LICENSE file.
 This vendoring is done in good faith with attribution; if the original author
-prefers a different arrangement, please open an issue at
-[JimLiu/baoyu-skills](https://github.com/JimLiu/baoyu-skills).
+prefers a different arrangement, please open an issue in this repository.

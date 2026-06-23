@@ -1,6 +1,6 @@
 """Claude stream-json 输出解析 + episode 运行记录。
 
-来源：JimLiu/baoyu-skills 的 claude_session.py，papergirl 裁剪为：
+从一个 claude stream-json 解析器裁剪而来，papergirl 版职责：
   - _extract: stream-json 行 → (session_id, final_text)
   - extract_json: 宽松 JSON 抠取（容忍围栏/前后说明文字）
   - record 子命令: 解析 episode 日志 → 写 state/runs/<date>-<slot>.json，
