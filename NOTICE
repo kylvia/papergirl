@@ -1,0 +1,36 @@
+papergirl
+Copyright 2026 papergirl contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It bundles the following third-party components, each under its own terms:
+
+------------------------------------------------------------------------
+1. last30days research skill
+   Location: .claude/skills/last30days/
+   License:  MIT (see .claude/skills/last30days/LICENSE)
+   Origin:   https://github.com/mvanhorn/last30days-skill
+   See:      .claude/skills/last30days/UPSTREAM.md
+
+2. bird-search (vendored inside last30days)
+   Location: .claude/skills/last30days/scripts/lib/vendor/bird-search/
+   License:  MIT (see that directory's LICENSE)
+
+3. WeChat draft SDK
+   Location: vendor/wechat-api/
+   Origin:   https://github.com/JimLiu/baoyu-skills
+             (skills/baoyu-post-to-wechat/scripts/)
+   Status:   The upstream repository is published WITHOUT an explicit
+             top-level license. These files are vendored here in good
+             faith with attribution. If the original author prefers a
+             different arrangement, please open an issue in this
+             repository. See vendor/wechat-api/LICENSE.md for the full
+             vendoring note and the list of local modifications.
+   This component is OPTIONAL: it is only exercised by the WeChat
+   publishing path (tools/push.py). The rest of the pipeline runs
+   without it.
+
+4. baoyu-md (npm dependency of the WeChat SDK)
+   License:  WTFPL, adapted from https://github.com/doocs/md
+   See:      vendor/wechat-api/LICENSE.md
+------------------------------------------------------------------------
