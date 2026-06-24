@@ -36,13 +36,15 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `tools/schedules.py` | schedule 对账引擎（apply/check，bootstrap+doctor 共用） | 自有代码 |
 | `tools/cover.py` | 生图（OpenAI-compatible 网关） | 自有代码 |
 | `tools/fetch_source_image.py` | 从来源页抓高信息量源图（og:image/正文大图）落 drafts/，正文配图 a 路径优先；复用 cover.py 下载逻辑、走直连不碰微信代理 | 自有代码 |
-| `tools/push.py` | 推草稿（注入 per-process 微信代理；文末自动追加 `assets/` 关注卡） | 自有代码 |
+| `tools/push.py` | 推稿入口：按 `PUBLISHER` 分发到 `tools/publishers/`（默认 wechat） | 自有代码 |
+| `tools/publishers/` | 发布适配器：`wechat`(SDK+per-process 代理+关注卡)、`vault`(零凭证导出 md bundle) | 自有代码；见其 README |
 | `tools/claude_session.py` | stream-json 解析 + 运行记录 | 自有代码 |
 | `tools/metrics.py` | 效果数据回流（人工喂，个人订阅号无 API） | 自有代码 |
 | `tools/review.py` | 每周复盘：质量信号归因到赛道/原型 | 自有代码 |
 | `tools/notify.py` | 推送通知（lark/wecom/feishu…），无人值守喊到人 | 自有代码 |
 | `tools/metrics_nudge.py` | 催数据：发布满 N 天没喂 metrics 就提醒 | 自有代码 |
 | `bin/console.sh` | 远程控制台：常驻 paseo agent，手机/终端运营（喂数据/查状态/复盘/补跑） | 自有代码 |
+| `bin/sync-public.sh` | 把本仓代码同步到公开模板仓，自动脱敏（品牌名/内部名）后推送 | 自有代码 |
 | `vendor/wechat-api/` | 微信草稿 SDK（vendored，origin baoyu-skills） | 不改；见 UPSTREAM.md |
 | `.claude/skills/last30days/` | 全网研究 skill（vendored，MIT） | 不改；见 UPSTREAM.md |
 | `state/published.json` | 发文史，选题查重的事实源 | episode 自动追加 |
