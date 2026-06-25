@@ -28,10 +28,16 @@ echo "== 凭证 =="
 if [ -f .env ]; then
   perm=$(stat -f '%Lp' .env 2>/dev/null || echo '?')
   [ "$perm" = "600" ] && ok ".env 存在且 0600" || warn ".env 权限 $perm（应 600：chmod 600 .env）"
-else bad ".env 缺失（cp .env.example .env 后填凭证）"; fi
+else warn ".env 缺失：vault 路径不需要；wechat/生图需要（cp .env.example .env 后填凭证）"; fi
 
 echo "== 定时档（对账 schedules.yaml）=="
-if ! python3 tools/schedules.py check; then fails=$((fails+1)); fi
+if ! python3 -c 'import yaml' 2>/dev/null; then
+  warn "pyyaml 未装，跳过定时档对账（仅 paseo 定时调度需要：pip install pyyaml）"
+elif ! command -v paseo >/dev/null 2>&1; then
+  warn "无 paseo，跳过定时档对账（fork 者不需要；用 cron 见 schedules.yaml）"
+elif ! python3 tools/schedules.py check; then
+  fails=$((fails+1))
+fi
 
 echo "== 控制台 agent =="
 cid=$(cat state/.console-agent-id 2>/dev/null || true)

@@ -28,7 +28,8 @@ paseo（或手动）→ bin/episode-runner.sh --slot am
 | `prompts/episode.md` | episode 任务书（流程本体） | 调流程改这里，不是改代码 |
 | `bin/episode-runner.sh` | spawn claude + 抓 session_id + 落运行记录 | 唯一 runner |
 | `bin/bootstrap.sh` | 新机/迁移一键重建（依赖+schedule+控制台 agent），幂等 | 自有代码 |
-| `bin/doctor.sh` | 体检：把"坑"变成会报警的守卫，绿=经验在守 | 自有代码 |
+| `bin/doctor.sh` | 体检：把"坑"变成会报警的守卫，绿=经验在守（运营者向） | 自有代码 |
+| `bin/onboard.sh` | fork 者上手：分清三条路依赖、直接跑零凭证 vault 样例（新人向，不碰运营基建） | 自有代码 |
 | `bin/status.sh` | 一屏状态（今日运行/草稿箱/下次/待喂/X），接手先跑 | 自有代码 |
 | `tools/status.py` | status.sh 的引擎（只读盘上文件 + paseo ls） | 自有代码 |
 | `bin/_env.sh` | 统一 PATH（nvm 最新 node 等），被各脚本 source；改环境只改这里 | 自有代码 |
