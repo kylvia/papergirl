@@ -32,6 +32,7 @@ echo "== ③ 上线公众号：wechat 适配器（可选）=="
 if has bun; then ok "bun → $(command -v bun)"; else miss "bun 缺——仅 wechat 推送需要"; fi
 if env_has WECHAT_APP_ID && env_has WECHAT_APP_SECRET; then ok ".env 已配公众号凭证"
 else miss "公众号凭证未配——仅 PUBLISHER=wechat 需要（vault 路径不需要）"; fi
+echo "    本机 IP 进不了公众号白名单时需代理，搭建见 docs/proxy.md"
 echo
 
 SAMPLE=examples/2026-01-01-sample
